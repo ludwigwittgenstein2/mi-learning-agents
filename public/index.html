@@ -342,15 +342,24 @@ textarea::placeholder { color: var(--text3); }
   <div class="card" style="margin-bottom:16px">
     <div class="sec">Change topic — all 7 agents adapt instantly</div>
     <div style="display:flex;gap:8px;align-items:center;margin-bottom:12px">
-      <input id="topic-input" type="text" value="Myocardial Infarction" placeholder="Enter any medical topic…"
+      <input id="topic-input" type="text" id="topic-input" placeholder="Enter any medical topic…"
         style="flex:1;padding:9px 12px;background:var(--bg);border:0.5px solid var(--line2);border-radius:8px;color:var(--text);font-family:var(--font-sans);font-size:13px;outline:none"
         onkeydown="if(event.key==='Enter')applyTopic()" />
       <button class="btn primary" onclick="applyTopic()">Apply</button>
     </div>
     <div style="display:flex;gap:5px;flex-wrap:wrap">
-      ${['Myocardial Infarction','Heart Failure','Sepsis','Diabetes','Hypertension','Stroke','Pneumonia','Pulmonary Embolism','Atrial Fibrillation','Acute Kidney Injury','COPD','Liver Failure'].map(t =>
-        `<button class="btn xs" style="border-radius:20px" onclick="document.getElementById('topic-input').value='${t}';applyTopic()">${t}</button>`
-      ).join('')}
+      <button class="btn xs" style="border-radius:20px" onclick="setTopicInput('Myocardial Infarction')">Myocardial Infarction</button>
+      <button class="btn xs" style="border-radius:20px" onclick="setTopicInput('Heart Failure')">Heart Failure</button>
+      <button class="btn xs" style="border-radius:20px" onclick="setTopicInput('Sepsis')">Sepsis</button>
+      <button class="btn xs" style="border-radius:20px" onclick="setTopicInput('Diabetes')">Diabetes</button>
+      <button class="btn xs" style="border-radius:20px" onclick="setTopicInput('Hypertension')">Hypertension</button>
+      <button class="btn xs" style="border-radius:20px" onclick="setTopicInput('Stroke')">Stroke</button>
+      <button class="btn xs" style="border-radius:20px" onclick="setTopicInput('Pneumonia')">Pneumonia</button>
+      <button class="btn xs" style="border-radius:20px" onclick="setTopicInput('Pulmonary Embolism')">Pulmonary Embolism</button>
+      <button class="btn xs" style="border-radius:20px" onclick="setTopicInput('Atrial Fibrillation')">Atrial Fibrillation</button>
+      <button class="btn xs" style="border-radius:20px" onclick="setTopicInput('Acute Kidney Injury')">Acute Kidney Injury</button>
+      <button class="btn xs" style="border-radius:20px" onclick="setTopicInput('COPD')">COPD</button>
+      <button class="btn xs" style="border-radius:20px" onclick="setTopicInput('Liver Failure')">Liver Failure</button>
     </div>
   </div>
 
@@ -457,16 +466,27 @@ let _topic = localStorage.getItem('mi_agents_topic') || 'Myocardial Infarction';
 
 function getTopic() { return _topic; }
 
+function setTopicInput(t) {
+  const inp = document.getElementById('topic-input');
+  if (inp) inp.value = t;
+  applyTopic();
+}
+
 function applyTopic() {
   const input = document.getElementById('topic-input');
   if (!input || !input.value.trim()) return;
   setTopic(input.value.trim());
-  // Restart all agents with new topic
+  // Re-render dashboard stats
   renderDashboard();
   renderRecommend();
-  // Visual confirmation
-  const btn = document.querySelector('.btn.primary[onclick="applyTopic()"]');
-  if (btn) { btn.textContent = '✓ Applied'; setTimeout(() => btn.textContent = 'Apply topic', 1500); }
+  // Visual confirmation on button
+  const btn = document.querySelector('[onclick="applyTopic()"]');
+  if (btn) {
+    const orig = btn.textContent;
+    btn.textContent = '✓ Applied';
+    btn.style.background = 'var(--green)';
+    setTimeout(() => { btn.textContent = orig; btn.style.background = ''; }, 1500);
+  }
 }
 
 function setTopic(t) {
@@ -755,14 +775,14 @@ function renderRecCards(recs, aiPowered) {
 // ═══════════════════════════════════════════════════════
 (function() {
   const body = document.getElementById('ret-body');
-  const SYS = `You are the Retrieval Agent, an AI tutor implementing retrieval practice theory (testing effect, Roediger & Karpicke 2006) for a healthcare professional learning about ${getTopic()}. Your role: (1) generate clinically accurate, educationally appropriate retrieval questions at varying cognitive levels; (2) semantically assess free-text answers — not just keyword matching but genuine understanding; (3) provide corrective feedback that re-encodes correct schema; (4) adaptively generate the NEXT question based on gaps you identify. Always be precise, evidence-based, and use real clinical scenarios.`;
+  const getSYS = () => `You are the Retrieval Agent, an AI tutor implementing retrieval practice theory (testing effect, Roediger & Karpicke 2006) for a healthcare professional learning about ${getTopic()}. Your role: (1) generate clinically accurate, educationally appropriate retrieval questions at varying cognitive levels; (2) semantically assess free-text answers — not just keyword matching but genuine understanding; (3) provide corrective feedback that re-encodes correct schema; (4) adaptively generate the NEXT question based on gaps you identify. Always be precise, evidence-based, and use real clinical scenarios.`;
   let history = [], questionCount = 0;
 
   async function startSession() {
     body.innerHTML = `<div class="card"><div class="sec">Starting retrieval session…</div></div>`;
     const t = thinking(body, 'Agent generating your first question…');
     try {
-      const q = await callClaude(SYS,
+      const q = await callClaude(getSYS(),
         `Generate a challenging retrieval question about ${getTopic()} for a healthcare learner. Pick one of: ECG interpretation, pathophysiology, pharmacology, clinical management, or complications. Return ONLY the question text — no preamble, no answer.`);
       t.remove();
       history.push({ role:'assistant', content: q });
@@ -792,7 +812,7 @@ function renderRecCards(recs, aiPowered) {
       const t = thinking(body, 'Agent assessing your answer…');
       history.push({ role:'user', content: `My answer: ${ans}` });
       try {
-        const assessment = await callClaudeJSON(SYS,
+        const assessment = await callClaudeJSON(getSYS(),
           `The learner answered this ${getTopic()} question: "${qText}"\n\nTheir answer: "${ans}"\n\nAssess their response and return JSON: {"correct": true/false, "score": 0-100, "feedback": "2-3 sentence corrective explanation with correct clinical detail", "gaps": ["specific gap 1", "specific gap 2"], "next_question": "A follow-up question targeting the most critical gap you identified"}`,
           700);
         t.remove();
@@ -836,7 +856,7 @@ function renderRecCards(recs, aiPowered) {
     if (!ans) return;
     const t = thinking(body, 'Assessing follow-up…');
     try {
-      const fb = await callClaude(SYS, `Follow-up question: "${q}"\nLearner answer: "${ans}"\nGive concise corrective feedback (2-3 sentences) with the clinically correct information.`, 400);
+      const fb = await callClaude(getSYS(), `Follow-up question: "${q}"\nLearner answer: "${ans}"\nGive concise corrective feedback (2-3 sentences) with the clinically correct information.`, 400);
       t.remove();
       logEvent('retrieval', 'followup', {});
       body.innerHTML += `<div class="card"><div class="ai-label">Follow-up feedback</div><div class="ai-response">${fb}</div>
@@ -852,7 +872,7 @@ function renderRecCards(recs, aiPowered) {
 // ═══════════════════════════════════════════════════════
 (function() {
   const body = document.getElementById('sp-body');
-  const SYS = `You are the Spacing Agent, implementing spaced repetition theory (Ebbinghaus forgetting curve, SM-2 algorithm). Your role: (1) present a concept due for review; (2) read the learner's free-text recall attempt; (3) infer their actual retention level from the quality, specificity, and accuracy of what they wrote — not just whether they wrote something; (4) set the next review interval accordingly; (5) explain what they missed. Topic: ${getTopic()}.`;
+  const getSYS = () => `You are the Spacing Agent, implementing spaced repetition theory (Ebbinghaus forgetting curve, SM-2 algorithm). Your role: (1) present a concept due for review; (2) read the learner's free-text recall attempt; (3) infer their actual retention level from the quality, specificity, and accuracy of what they wrote — not just whether they wrote something; (4) set the next review interval accordingly; (5) explain what they missed. Topic: ${getTopic()}.`;
 
   const concepts = [
     { name:'STEMI ECG criteria', daysAgo:15, interval:14, reps:4, base:82 },
@@ -914,7 +934,7 @@ function renderRecCards(recs, aiPowered) {
     const concept = due.find(c=>c.name===name);
     const t = thinking(body, 'Agent reading your recall and inferring retention…');
     try {
-      const result = await callClaudeJSON(SYS,
+      const result = await callClaudeJSON(getSYS(),
         `Concept being reviewed: "${name}"\nLearner's recall attempt: "${recall}"\n\nAssess their retention and return JSON: {"retention_score": 0-100, "interval_days": 1-30, "what_they_got_right": "brief", "what_they_missed": "specific gaps with correct information", "verdict": "forgotten|partial|good|excellent"}`,
         600);
       t.remove();
@@ -945,7 +965,7 @@ function renderRecCards(recs, aiPowered) {
 // ═══════════════════════════════════════════════════════
 (function() {
   const body = document.getElementById('il-body');
-  const SYS = `You are the Interleaving Agent, implementing interleaved practice theory (Kornell & Bjork 2008) for ${getTopic()} education. You generate questions from randomly mixed domains (Pathophysiology, Pharmacology, ECG interpretation, Clinical management) without revealing the domain. After the learner answers, you: (1) reveal which domain the question belonged to; (2) assess whether they correctly identified the domain; (3) score their answer; (4) explain the correct reasoning. The key pedagogical goal: force the learner to identify WHICH type of problem they're facing before solving it.`;
+  const getSYS = () => `You are the Interleaving Agent, implementing interleaved practice theory (Kornell & Bjork 2008) for ${getTopic()} education. You generate questions from randomly mixed domains (Pathophysiology, Pharmacology, ECG interpretation, Clinical management) without revealing the domain. After the learner answers, you: (1) reveal which domain the question belonged to; (2) assess whether they correctly identified the domain; (3) score their answer; (4) explain the correct reasoning. The key pedagogical goal: force the learner to identify WHICH type of problem they're facing before solving it.`;
   let sessionCount = 0;
 
   async function generateQuestion() {
@@ -953,7 +973,7 @@ function renderRecCards(recs, aiPowered) {
     body.innerHTML = '';
     const t = thinking(body, 'Agent selecting domain and generating interleaved question…');
     try {
-      const result = await callClaudeJSON(SYS,
+      const result = await callClaudeJSON(getSYS(),
         `Generate an interleaved ${getTopic()} question. Randomly pick one domain: Pathophysiology, Pharmacology, ECG interpretation, or Clinical management. Create a challenging, clinically realistic question. Do NOT reveal the domain in the question text. Return JSON: {"domain": "chosen domain", "question": "the question text", "domain_cue": "what feature of this question signals its domain (explain after reveal)"}`,
         400);
       t.remove();
@@ -980,7 +1000,7 @@ function renderRecCards(recs, aiPowered) {
         if (!ans) return;
         const t2 = thinking(body, 'Agent assessing domain identification and answer quality…');
         try {
-          const fb = await callClaudeJSON(SYS,
+          const fb = await callClaudeJSON(getSYS(),
             `Question: "${result.question}"\nCorrect domain: "${result.domain}"\nLearner selected domain: "${selectedDomain||'not selected'}"\nLearner answer: "${ans}"\nDomain cue: "${result.domain_cue}"\n\nReturn JSON: {"domain_correct": true/false, "answer_score": 0-100, "domain_feedback": "why this question belongs to this domain", "answer_feedback": "assessment of their clinical answer", "interleaving_insight": "what this mix of domains teaches"}`,
             600);
           t2.remove();
@@ -1025,7 +1045,7 @@ function renderRecCards(recs, aiPowered) {
 // ═══════════════════════════════════════════════════════
 (function() {
   const body = document.getElementById('gen-body');
-  const SYS = `You are the Generation Agent, implementing the generation effect (Slamecka & Graf 1978) for ${getTopic()} education. You: (1) present a concept cue that prompts the learner to generate knowledge before seeing the answer; (2) read their generation carefully; (3) compare it to expert-level knowledge; (4) identify SPECIFIC conceptual gaps — not just missing facts but missing understanding; (5) ask a targeted consolidation question about the most important gap. Your goal is to make the generation-correction cycle as educationally potent as possible.`;
+  const getSYS = () => `You are the Generation Agent, implementing the generation effect (Slamecka & Graf 1978) for ${getTopic()} education. You: (1) present a concept cue that prompts the learner to generate knowledge before seeing the answer; (2) read their generation carefully; (3) compare it to expert-level knowledge; (4) identify SPECIFIC conceptual gaps — not just missing facts but missing understanding; (5) ask a targeted consolidation question about the most important gap. Your goal is to make the generation-correction cycle as educationally potent as possible.`;
 
   const cues = [
     'Describe what happens at the cellular level in the first 30 minutes of complete complete ${getTopic()} pathophysiology progression — before looking anything up.',
@@ -1060,7 +1080,7 @@ function renderRecCards(recs, aiPowered) {
     if (!gen) return;
     const t = thinking(body, 'Agent comparing your generation to expert knowledge…');
     try {
-      const result = await callClaudeJSON(SYS,
+      const result = await callClaudeJSON(getSYS(),
         `Generation cue: "${cue}"\nLearner's generation: "${gen}"\n\nAnalyse and return JSON: {"expert_answer": "comprehensive expert-level answer (4-6 sentences)", "what_learner_captured": "specific things they got right", "key_gaps": ["gap 1 with brief correct info", "gap 2 with brief correct info", "gap 3 with brief correct info"], "most_important_gap": "the single most clinically significant thing they missed", "consolidation_question": "a targeted question about the most important gap"}`,
         800);
       t.remove();
@@ -1090,7 +1110,7 @@ function renderRecCards(recs, aiPowered) {
         const ans = document.getElementById('cons-ta')?.value?.trim();
         if (!ans) return;
         const t2 = thinking(body, 'Agent assessing consolidation…');
-        const fb = await callClaude(SYS, `Consolidation question: "${q}"\nLearner answer: "${ans}"\nGive focused feedback (2-3 sentences) on whether they addressed the gap. Be specific about what is still missing or confirm what they now understand.`, 350);
+        const fb = await callClaude(getSYS(), `Consolidation question: "${q}"\nLearner answer: "${ans}"\nGive focused feedback (2-3 sentences) on whether they addressed the gap. Be specific about what is still missing or confirm what they now understand.`, 350);
         t2.remove();
         body.innerHTML += `<div class="card"><div class="ai-label">Consolidation feedback</div><div class="ai-response">${fb}</div>
           <div class="btn-row"><button class="btn primary" onclick="cueIdx++;renderCue()">Next generation case →</button></div></div>`;
@@ -1107,7 +1127,7 @@ function renderRecCards(recs, aiPowered) {
 // ═══════════════════════════════════════════════════════
 (function() {
   const body = document.getElementById('elab-body');
-  const SYS = `You are the Elaboration Agent, implementing elaborative interrogation theory (Pressley et al. 1992) for ${getTopic()} education. You: (1) present a why/how question; (2) read the learner's elaboration; (3) DECIDE — based on the quality of their answer — whether to go DEEPER (they answered well, probe the next mechanism), REDIRECT (they misunderstood something important), or CONSOLIDATE (they've reached adequate depth at this level); (4) generate the appropriate next prompt. You build a Socratic path through mechanistic knowledge. Think of yourself as a Socratic tutor who reads the quality of reasoning, not just the presence of facts.`;
+  const getSYS = () => `You are the Elaboration Agent, implementing elaborative interrogation theory (Pressley et al. 1992) for ${getTopic()} education. You: (1) present a why/how question; (2) read the learner's elaboration; (3) DECIDE — based on the quality of their answer — whether to go DEEPER (they answered well, probe the next mechanism), REDIRECT (they misunderstood something important), or CONSOLIDATE (they've reached adequate depth at this level); (4) generate the appropriate next prompt. You build a Socratic path through mechanistic knowledge. Think of yourself as a Socratic tutor who reads the quality of reasoning, not just the presence of facts.`;
   let depth = 0, path = [];
   const rootQuestions = [
     'Why does acute MI cause cardiogenic shock in some patients but not others?',
@@ -1151,7 +1171,7 @@ function renderRecCards(recs, aiPowered) {
     logEvent('elaboration','elaboration_depth',{depth:d});
     STATE.learnerProfile.preferredDepth = Math.max(STATE.learnerProfile.preferredDepth||0, d+1);
     try {
-      const result = await callClaudeJSON(SYS,
+      const result = await callClaudeJSON(getSYS(),
         `Current question (depth ${d+1}): "${window._elabQuestion}"\nLearner's elaboration: "${ans}"\n\nDecide the next step and return JSON: {"decision": "deeper|redirect|consolidate", "assessment": "1-2 sentences on quality of their elaboration", "next_question": "if deeper or redirect: the next probing question; if consolidate: a summary insight", "reasoning": "why you made this decision"}`,
         500);
       t.remove();
@@ -1193,7 +1213,7 @@ function renderRecCards(recs, aiPowered) {
 // ═══════════════════════════════════════════════════════
 (function() {
   const body = document.getElementById('ref-body');
-  const SYS = `You are the Reflection Agent, implementing metacognitive reflection theory (Schön 1983, Flavell 1979) for ${getTopic()} education. You read the learner's reflection and do three things: (1) identify genuine insights — what they are correctly understanding about their own learning; (2) identify blind spots — metacognitive errors, overconfidence, or gaps in self-assessment they don't see; (3) generate a targeted follow-up prompt that challenges their most significant blind spot. You are a Socratic mirror — you reflect back what they cannot see in themselves.`;
+  const getSYS = () => `You are the Reflection Agent, implementing metacognitive reflection theory (Schön 1983, Flavell 1979) for ${getTopic()} education. You read the learner's reflection and do three things: (1) identify genuine insights — what they are correctly understanding about their own learning; (2) identify blind spots — metacognitive errors, overconfidence, or gaps in self-assessment they don't see; (3) generate a targeted follow-up prompt that challenges their most significant blind spot. You are a Socratic mirror — you reflect back what they cannot see in themselves.`;
   const journal = [];
   const frameworks = [
     { label:'Calibration', icon:'◎', theory:'Dunning-Kruger / Flavell 1979', prompt:'Before this session, how confident were you in your MI knowledge (1–10)? After completing questions, which specific moments revealed a gap between your confidence and actual accuracy? What does this tell you about your self-assessment?' },
@@ -1233,7 +1253,7 @@ function renderRecCards(recs, aiPowered) {
     const f = frameworks.find(x=>x.label===framework);
     const t = thinking(body, 'Agent reading your reflection and identifying blind spots…');
     try {
-      const result = await callClaudeJSON(SYS,
+      const result = await callClaudeJSON(getSYS(),
         `Reflection framework: ${framework} (${f?.theory})\nPrompt given: "${f?.prompt}"\nLearner's reflection: "${text}"\n\nAnalyse and return JSON: {"genuine_insights": "what they are correctly understanding about their own learning", "blind_spots": "metacognitive errors, overconfidence, or gaps they don't see", "follow_up_prompt": "a Socratic question that challenges their most significant blind spot", "metacognitive_quality": "surface|developing|deep"}`,
         600);
       t.remove();
@@ -1260,7 +1280,7 @@ function renderRecCards(recs, aiPowered) {
         const ans = document.getElementById('ref-followup')?.value?.trim();
         if (!ans) return;
         const t2 = thinking(body, 'Agent reflecting on your response…');
-        const fb = await callClaude(SYS, `Follow-up prompt: "${result.follow_up_prompt}"\nResponse: "${ans}"\nGive a brief (2-3 sentence) reflective response that acknowledges what they saw and points to what remains to be examined.`, 300);
+        const fb = await callClaude(getSYS(), `Follow-up prompt: "${result.follow_up_prompt}"\nResponse: "${ans}"\nGive a brief (2-3 sentence) reflective response that acknowledges what they saw and points to what remains to be examined.`, 300);
         t2.remove();
         body.innerHTML += `<div class="card"><div class="ai-label">Agent reflection</div><div class="ai-response">${fb}</div><div class="btn-row"><button class="btn primary" onclick="renderReflect()">Continue reflecting →</button></div></div>`;
         window.renderReflect = renderReflect;
@@ -1276,14 +1296,14 @@ function renderRecCards(recs, aiPowered) {
 // ═══════════════════════════════════════════════════════
 (function() {
   const body = document.getElementById('dif-body');
-  const SYS = `You are the Difficulty Agent, implementing desirable difficulties theory (Bjork 1994) for MI education. You: (1) generate a question at the current difficulty level (1=Recall, 2=Application, 3=Analysis, 4=Expert synthesis); (2) read the learner's response; (3) autonomously decide whether to ESCALATE (they handled it well), HOLD (appropriate challenge, keep level), or REDUCE (they are struggling beyond productive difficulty); (4) generate the next question at the adjusted level. Target the 60-70% success zone — challenging enough to slow acquisition, easy enough to maintain engagement. Difficulty dimensions you control: cue availability, context complexity, ambiguity, response openness, time constraints in the question.`;
+  const getSYS = () => `You are the Difficulty Agent, implementing desirable difficulties theory (Bjork 1994) for MI education. You: (1) generate a question at the current difficulty level (1=Recall, 2=Application, 3=Analysis, 4=Expert synthesis); (2) read the learner's response; (3) autonomously decide whether to ESCALATE (they handled it well), HOLD (appropriate challenge, keep level), or REDUCE (they are struggling beyond productive difficulty); (4) generate the next question at the adjusted level. Target the 60-70% success zone — challenging enough to slow acquisition, easy enough to maintain engagement. Difficulty dimensions you control: cue availability, context complexity, ambiguity, response openness, time constraints in the question.`;
   let currentLevel = 2;
 
   async function generateDiffQuestion() {
     const t = thinking(body, `Agent generating level ${currentLevel} question…`);
     const levelLabels = {1:'Recall',2:'Application',3:'Analysis',4:'Expert synthesis'};
     try {
-      const q = await callClaudeJSON(SYS,
+      const q = await callClaudeJSON(getSYS(),
         `Generate a ${getTopic()} question at difficulty level ${currentLevel} (${levelLabels[currentLevel]}). Level 1=cued recall with scaffolding. Level 2=case application, no cues. Level 3=multi-step data interpretation. Level 4=synthesis with defense of reasoning under uncertainty. Return JSON: {"question": "the question", "level": ${currentLevel}, "difficulty_note": "what makes this question at this difficulty level"}`,
         400);
       t.remove();
@@ -1312,7 +1332,7 @@ function renderRecCards(recs, aiPowered) {
     const t = thinking(body, 'Agent assessing difficulty fit and deciding next level…');
     const levelLabels = {1:'Recall',2:'Application',3:'Analysis',4:'Expert synthesis'};
     try {
-      const result = await callClaudeJSON(SYS,
+      const result = await callClaudeJSON(getSYS(),
         `Question (Level ${level}): "${q}"\nLearner answer: "${ans}"\n\nAssess and return JSON: {"score": 0-100, "decision": "escalate|hold|reduce", "next_level": ${Math.min(4,Math.max(1,level))}, "reasoning": "why this decision based on their performance", "answer_feedback": "clinical feedback on their answer (2-3 sentences)", "next_level_preview": "what the next question type will look like"}`,
         600);
       t.remove();
@@ -1447,6 +1467,15 @@ window.addEventListener('DOMContentLoaded', () => {
   }
   const keyBtn = keyStatus?.nextElementSibling;
   if (keyBtn) keyBtn.style.display = 'none';
+
+  // Restore saved topic
+  const saved = localStorage.getItem('mi_agents_topic') || 'Myocardial Infarction';
+  _topic = saved;
+  const inp = document.getElementById('topic-input');
+  if (inp) inp.value = saved;
+  document.querySelectorAll('.topic-label').forEach(el => el.textContent = saved);
+  const sf = document.getElementById('sidebar-topic');
+  if (sf) sf.textContent = 'Topic: ' + saved;
 });
 </script>
 </body>
