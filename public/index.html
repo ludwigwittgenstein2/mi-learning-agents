@@ -1,0 +1,1441 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MI Learning Agents — Agentic AI System</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:      #0f0f0f;
+  --bg2:     #161616;
+  --bg3:     #1e1e1e;
+  --bg4:     #252525;
+  --line:    rgba(255,255,255,0.07);
+  --line2:   rgba(255,255,255,0.13);
+  --line3:   rgba(255,255,255,0.22);
+  --text:    #f0ede8;
+  --text2:   #9a9690;
+  --text3:   #5a5652;
+  --accent:  #c9b99a;
+  --gold:    #d4a853;
+  --green:   #4caf7d;
+  --red:     #e05252;
+  --blue:    #5b9bd5;
+  --font-serif: 'DM Serif Display', Georgia, serif;
+  --font-sans:  'Instrument Sans', system-ui, sans-serif;
+  --font-mono:  'DM Mono', monospace;
+}
+
+html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--font-sans); font-size: 14px; line-height: 1.6; }
+
+/* ── Shell ── */
+.shell { display: flex; height: 100vh; overflow: hidden; }
+
+/* ── Sidebar ── */
+.sidebar {
+  width: 240px; flex-shrink: 0;
+  background: var(--bg2);
+  border-right: 0.5px solid var(--line2);
+  display: flex; flex-direction: column;
+  overflow-y: auto;
+}
+.brand {
+  padding: 22px 20px 18px;
+  border-bottom: 0.5px solid var(--line);
+}
+.brand-title {
+  font-family: var(--font-serif);
+  font-size: 17px;
+  color: var(--text);
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  margin-bottom: 4px;
+}
+.brand-sub { font-size: 11px; color: var(--text3); letter-spacing: .02em; }
+.nav-section {
+  font-size: 9px; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--text3); padding: 16px 20px 6px;
+}
+.nav-item {
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 20px; font-size: 12px; color: var(--text2);
+  cursor: pointer; transition: all .15s;
+  border-left: 2px solid transparent;
+  user-select: none;
+}
+.nav-item:hover { background: var(--bg3); color: var(--text); }
+.nav-item.active { color: var(--text); background: var(--bg3); border-left-color: var(--accent); }
+.nav-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+.sidebar-foot {
+  margin-top: auto; padding: 16px 20px;
+  border-top: 0.5px solid var(--line);
+  font-size: 10px; color: var(--text3); line-height: 1.7;
+}
+
+/* ── Main ── */
+.main { flex: 1; overflow-y: auto; padding: 36px 40px; }
+.panel { display: none; max-width: 740px; }
+.panel.active { display: block; }
+
+/* ── Page Header ── */
+.page-hd { margin-bottom: 28px; }
+.page-title {
+  font-family: var(--font-serif); font-size: 28px;
+  color: var(--text); letter-spacing: -0.02em;
+  line-height: 1.15; margin-bottom: 6px;
+}
+.page-sub { font-size: 12px; color: var(--text3); }
+.theory-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 10px; border-radius: 20px;
+  border: 0.5px solid var(--line2);
+  font-size: 10px; color: var(--text2);
+  letter-spacing: .03em; margin-bottom: 14px;
+}
+.theory-chip .dot { width: 5px; height: 5px; border-radius: 50%; }
+
+/* ── Cards ── */
+.card {
+  background: var(--bg2);
+  border: 0.5px solid var(--line2);
+  border-radius: 12px;
+  padding: 20px 22px;
+  margin-bottom: 12px;
+}
+.card.glow { border-color: var(--accent); box-shadow: 0 0 0 1px rgba(201,185,154,0.08); }
+
+/* ── Sections ── */
+.sec { font-size: 9px; letter-spacing: .1em; text-transform: uppercase; color: var(--text3); margin-bottom: 8px; }
+
+/* ── Buttons ── */
+.btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 9px 18px; border-radius: 8px;
+  font-size: 12px; font-weight: 500; font-family: var(--font-sans);
+  border: 0.5px solid var(--line2);
+  background: var(--bg3); color: var(--text);
+  cursor: pointer; transition: all .15s; white-space: nowrap;
+}
+.btn:hover { background: var(--bg4); border-color: var(--line3); }
+.btn:active { transform: scale(.98); }
+.btn.primary {
+  background: var(--accent); color: var(--bg);
+  border-color: var(--accent); font-weight: 600;
+}
+.btn.primary:hover { opacity: .9; }
+.btn.sm { padding: 6px 12px; font-size: 11px; }
+.btn.xs { padding: 4px 9px; font-size: 10px; }
+.btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+
+/* ── Textarea ── */
+textarea {
+  width: 100%; min-height: 90px;
+  padding: 12px 14px;
+  background: var(--bg); border: 0.5px solid var(--line2);
+  border-radius: 8px; color: var(--text);
+  font-family: var(--font-sans); font-size: 13px;
+  line-height: 1.65; resize: vertical;
+  transition: border-color .15s;
+}
+textarea:focus { outline: none; border-color: var(--line3); }
+textarea::placeholder { color: var(--text3); }
+
+/* ── Choice buttons ── */
+.choice {
+  display: block; width: 100%; text-align: left;
+  padding: 11px 14px; margin-bottom: 8px;
+  border: 0.5px solid var(--line2); border-radius: 8px;
+  background: var(--bg3); color: var(--text);
+  font-size: 13px; cursor: pointer; transition: all .15s;
+  font-family: var(--font-sans); line-height: 1.5;
+}
+.choice:hover { border-color: var(--line3); background: var(--bg4); }
+.choice.correct { background: rgba(76,175,125,0.12); border-color: var(--green); color: #7dd4a8; }
+.choice.incorrect { background: rgba(224,82,82,0.12); border-color: var(--red); color: #e88; }
+
+/* ── Feedback ── */
+.feedback {
+  padding: 12px 14px; border-radius: 8px;
+  font-size: 13px; line-height: 1.65;
+  margin-top: 12px; display: none;
+}
+.feedback.show { display: block; }
+.feedback.success { background: rgba(76,175,125,0.1); color: #7dd4a8; border: 0.5px solid rgba(76,175,125,0.3); }
+.feedback.info { background: rgba(91,155,213,0.1); color: #8bb8e8; border: 0.5px solid rgba(91,155,213,0.3); }
+.feedback.warning { background: rgba(212,168,83,0.1); color: var(--gold); border: 0.5px solid rgba(212,168,83,0.3); }
+.feedback.danger { background: rgba(224,82,82,0.1); color: #e88; border: 0.5px solid rgba(224,82,82,0.3); }
+
+/* ── Progress ── */
+.prog-row { display: flex; gap: 3px; margin-bottom: 16px; }
+.prog-row span { height: 2px; flex: 1; border-radius: 1px; background: var(--bg4); transition: background .3s; }
+.prog-row span.done { background: var(--accent); }
+.prog-row span.now { background: var(--text3); }
+
+/* ── Bar ── */
+.bar-wrap { flex: 1; height: 5px; background: var(--bg4); border-radius: 3px; overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 3px; transition: width .5s; }
+.flex-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+.flex-between { display: flex; align-items: center; justify-content: space-between; }
+
+/* ── Stats ── */
+.stat-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; margin-bottom: 14px; }
+.stat-grid.two { grid-template-columns: 1fr 1fr; }
+.stat-box { padding: 14px 16px; background: var(--bg2); border-radius: 10px; border: 0.5px solid var(--line); }
+.stat-num { font-family: var(--font-serif); font-size: 26px; color: var(--text); letter-spacing: -0.02em; }
+.stat-lbl { font-size: 10px; color: var(--text3); margin-top: 2px; }
+
+/* ── Agent rows ── */
+.agent-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 12px; border-radius: 8px;
+  border: 0.5px solid var(--line); margin-bottom: 6px;
+  cursor: pointer; transition: all .15s;
+}
+.agent-row:hover { background: var(--bg3); border-color: var(--line2); }
+
+/* ── Thinking indicator ── */
+.thinking {
+  display: flex; align-items: center; gap: 10px;
+  padding: 14px 16px; border-radius: 8px;
+  background: var(--bg3); border: 0.5px solid var(--line2);
+  font-size: 12px; color: var(--text2); margin-bottom: 12px;
+}
+.thinking-dots { display: flex; gap: 4px; }
+.thinking-dots span {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: var(--accent); opacity: .3;
+  animation: pulse 1.2s infinite;
+}
+.thinking-dots span:nth-child(2) { animation-delay: .2s; }
+.thinking-dots span:nth-child(3) { animation-delay: .4s; }
+@keyframes pulse { 0%,100%{opacity:.3} 50%{opacity:1} }
+
+/* ── AI Response ── */
+.ai-response {
+  background: var(--bg);
+  border: 0.5px solid var(--line2);
+  border-radius: 10px;
+  padding: 16px 18px;
+  font-size: 13px;
+  line-height: 1.75;
+  color: var(--text2);
+  margin-top: 10px;
+  white-space: pre-wrap;
+}
+.ai-response strong { color: var(--text); font-weight: 600; }
+.ai-label {
+  font-size: 9px; letter-spacing: .1em; text-transform: uppercase;
+  color: var(--accent); margin-bottom: 6px;
+}
+
+/* ── Depth tabs ── */
+.depth-tabs { display: flex; gap: 5px; margin-bottom: 14px; }
+.depth-tab {
+  flex: 1; padding: 6px; border-radius: 6px; text-align: center;
+  font-size: 10px; border: 0.5px solid var(--line); color: var(--text3);
+  transition: all .15s; cursor: default;
+}
+.depth-tab.active { border-color: var(--line3); color: var(--text); background: var(--bg3); font-weight: 500; }
+
+/* ── Rec items ── */
+.rec-item {
+  border: 0.5px solid var(--line); border-radius: 10px;
+  padding: 14px 16px; margin-bottom: 8px;
+  cursor: pointer; transition: all .15s;
+}
+.rec-item:hover { border-color: var(--line2); background: var(--bg3); }
+.rec-item.top { border-color: var(--accent); }
+.rec-bar { height: 2px; background: var(--bg4); border-radius: 1px; margin-top: 8px; overflow: hidden; }
+.rec-bar-fill { height: 100%; border-radius: 1px; transition: width .5s; }
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--line2); border-radius: 2px; }
+
+/* ── Agentic badge ── */
+.agentic-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 10px; border-radius: 20px;
+  background: rgba(201,185,154,0.1);
+  border: 0.5px solid rgba(201,185,154,0.25);
+  font-size: 10px; color: var(--accent);
+  letter-spacing: .03em; margin-bottom: 6px;
+}
+.live-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--green); animation: pulse 2s infinite; }
+
+/* ── Journal entry ── */
+.journal-entry {
+  padding: 10px 0;
+  border-bottom: 0.5px solid var(--line);
+}
+.journal-entry:last-child { border-bottom: none; }
+
+/* ── Compare grid ── */
+.compare-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px; }
+.compare-pane {
+  padding: 12px 14px; background: var(--bg);
+  border-radius: 8px; border: 0.5px solid var(--line2);
+  font-size: 12px; color: var(--text2); line-height: 1.7; min-height: 80px;
+}
+
+@media (max-width: 768px) {
+  .shell { flex-direction: column; }
+  .sidebar { width: 100%; height: auto; flex-direction: row; flex-wrap: wrap; padding: 8px; gap: 4px; border-right: none; border-bottom: 0.5px solid var(--line2); }
+  .brand, .nav-section, .sidebar-foot { display: none; }
+  .nav-item { padding: 6px 10px; border-radius: 20px; border-left: none; font-size: 11px; }
+  .nav-item.active { background: var(--bg3); }
+  .main { padding: 16px; }
+  .stat-grid { grid-template-columns: 1fr 1fr; }
+  .compare-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<!-- ═══ SIDEBAR ═══ -->
+<nav class="sidebar">
+  <div class="brand">
+    <div class="brand-title">MI Learning<br>Agents</div>
+    <div class="brand-sub" style="margin-top:6px">Agentic AI · Healthcare Education</div>
+  </div>
+
+  <div class="nav-section">Orchestrator</div>
+  <div class="nav-item active" data-panel="dashboard"><div class="nav-dot" style="background:#555"></div>Dashboard</div>
+  <div class="nav-item" data-panel="recommend"><div class="nav-dot" style="background:#aaa"></div>Recommend</div>
+
+  <div class="nav-section">7 Agents</div>
+  <div class="nav-item" data-panel="retrieval"><div class="nav-dot" style="background:#5b9bd5"></div>1 · Retrieval</div>
+  <div class="nav-item" data-panel="spacing"><div class="nav-dot" style="background:#4caf7d"></div>2 · Spacing</div>
+  <div class="nav-item" data-panel="interleaving"><div class="nav-dot" style="background:#c4813a"></div>3 · Interleaving</div>
+  <div class="nav-item" data-panel="generation"><div class="nav-dot" style="background:#c0604a"></div>4 · Generation</div>
+  <div class="nav-item" data-panel="elaboration"><div class="nav-dot" style="background:#6aab44"></div>5 · Elaboration</div>
+  <div class="nav-item" data-panel="reflection"><div class="nav-dot" style="background:#9b7fd4"></div>6 · Reflection</div>
+  <div class="nav-item" data-panel="difficulty"><div class="nav-dot" style="background:#c4607a"></div>7 · Difficulty</div>
+
+  <div class="sidebar-foot">
+    Topic: Myocardial Infarction<br>
+    Powered by Claude claude-sonnet-4-20250514<br>
+    Rejeleene &amp; Mehta · CCF 2026
+    <div id="key-status" style="margin-top:10px;padding:6px 8px;border-radius:6px;font-size:10px;border:0.5px solid var(--line)"></div>
+    <button class="btn xs" style="margin-top:6px;width:100%;justify-content:center" onclick="showKeyPanel()">
+      API Key Settings
+    </button>
+  </div>
+</nav>
+
+<!-- ═══ MAIN ═══ -->
+<main class="main">
+
+<!-- DASHBOARD -->
+<div class="panel active" id="panel-dashboard">
+  <div class="page-hd">
+    <div class="page-title">Learning Dashboard</div>
+    <div class="page-sub">Live performance across all 7 agentic learning systems</div>
+  </div>
+  <div id="dash-body"></div>
+</div>
+
+<!-- RECOMMEND -->
+<div class="panel" id="panel-recommend">
+  <div class="page-hd">
+    <div class="page-title">Orchestrator</div>
+    <div class="page-sub">AI-ranked recommendations based on your current learning state</div>
+  </div>
+  <div id="rec-body"></div>
+</div>
+
+<!-- RETRIEVAL -->
+<div class="panel" id="panel-retrieval">
+  <div class="page-hd">
+    <div class="agentic-badge"><div class="live-dot"></div>Live agent · Claude claude-sonnet-4-20250514</div>
+    <div class="page-title">Retrieval Agent</div>
+    <div class="page-sub">Testing Effect · Roediger &amp; Karpicke 2006 — the agent reads your answer semantically and generates targeted follow-up questions</div>
+  </div>
+  <div id="ret-body"></div>
+</div>
+
+<!-- SPACING -->
+<div class="panel" id="panel-spacing">
+  <div class="page-hd">
+    <div class="agentic-badge"><div class="live-dot"></div>Live agent · Claude claude-sonnet-4-20250514</div>
+    <div class="page-title">Spacing Agent</div>
+    <div class="page-sub">Spaced Repetition · Ebbinghaus 1885 — the agent reads your recall attempt and infers retention to set the next interval</div>
+  </div>
+  <div id="sp-body"></div>
+</div>
+
+<!-- INTERLEAVING -->
+<div class="panel" id="panel-interleaving">
+  <div class="page-hd">
+    <div class="agentic-badge"><div class="live-dot"></div>Live agent · Claude claude-sonnet-4-20250514</div>
+    <div class="page-title">Interleaving Agent</div>
+    <div class="page-sub">Discrimination Learning · Kornell &amp; Bjork 2008 — the agent generates mixed-domain questions and assesses domain identification</div>
+  </div>
+  <div id="il-body"></div>
+</div>
+
+<!-- GENERATION -->
+<div class="panel" id="panel-generation">
+  <div class="page-hd">
+    <div class="agentic-badge"><div class="live-dot"></div>Live agent · Claude claude-sonnet-4-20250514</div>
+    <div class="page-title">Generation Agent</div>
+    <div class="page-sub">Generation Effect · Slamecka &amp; Graf 1978 — the agent compares your generation to expert knowledge and identifies specific gaps</div>
+  </div>
+  <div id="gen-body"></div>
+</div>
+
+<!-- ELABORATION -->
+<div class="panel" id="panel-elaboration">
+  <div class="page-hd">
+    <div class="agentic-badge"><div class="live-dot"></div>Live agent · Claude claude-sonnet-4-20250514</div>
+    <div class="page-title">Elaboration Agent</div>
+    <div class="page-sub">Elaborative Interrogation · Pressley et al. 1992 — the agent reads your elaboration and decides whether to probe deeper or redirect</div>
+  </div>
+  <div id="elab-body"></div>
+</div>
+
+<!-- REFLECTION -->
+<div class="panel" id="panel-reflection">
+  <div class="page-hd">
+    <div class="agentic-badge"><div class="live-dot"></div>Live agent · Claude claude-sonnet-4-20250514</div>
+    <div class="page-title">Reflection Agent</div>
+    <div class="page-sub">Metacognitive Reflection · Schön 1983 — the agent reads your reflection and identifies blind spots, misconceptions, and growth edges</div>
+  </div>
+  <div id="ref-body"></div>
+</div>
+
+<!-- DIFFICULTY -->
+<div class="panel" id="panel-difficulty">
+  <div class="page-hd">
+    <div class="agentic-badge"><div class="live-dot"></div>Live agent · Claude claude-sonnet-4-20250514</div>
+    <div class="page-title">Difficulty Agent</div>
+    <div class="page-sub">Desirable Difficulties · Bjork 1994 — the agent assesses your response and autonomously decides whether to escalate, hold, or reduce challenge</div>
+  </div>
+  <div id="dif-body"></div>
+</div>
+
+</main>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════════════
+function goTo(id) {
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.panel === id));
+  document.querySelectorAll('.panel').forEach(p => p.classList.toggle('active', p.id === 'panel-' + id));
+  window.scrollTo(0,0);
+}
+document.querySelectorAll('.nav-item').forEach(n => n.onclick = () => goTo(n.dataset.panel));
+
+// ═══════════════════════════════════════════════════════
+// ANTHROPIC API CALL
+// ═══════════════════════════════════════════════════════
+let _apiKey = '';
+
+function getApiKey() {
+  return _apiKey || localStorage.getItem('mi_agents_api_key') || '';
+}
+
+function setApiKey(key) {
+  _apiKey = key.trim();
+  try { localStorage.setItem('mi_agents_api_key', _apiKey); } catch(e) {}
+}
+
+async function callClaude(systemPrompt, userMessage, maxTokens = 800) {
+  const key = getApiKey();
+  // Detect whether we are being served by the local proxy (localhost)
+  // or opened directly as a file. Route accordingly.
+  const isServed = window.location.protocol !== 'file:';
+  const url = isServed
+    ? '/api/claude'
+    : 'https://api.anthropic.com/v1/messages';
+
+  const headers = { 'Content-Type': 'application/json' };
+  // Only attach key for direct calls — proxy handles auth server-side
+  if (!isServed && key) {
+    headers['x-api-key'] = key;
+    headers['anthropic-version'] = '2023-06-01';
+  }
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: maxTokens,
+      system: systemPrompt,
+      messages: [{ role: 'user', content: userMessage }]
+    })
+  });
+  const data = await res.json();
+  if (data.error) throw new Error(data.error.message);
+  return data.content[0].text;
+}
+
+async function callClaudeJSON(systemPrompt, userMessage, maxTokens = 600) {
+  const text = await callClaude(
+    systemPrompt + '\n\nRespond ONLY with valid JSON. No markdown, no backticks, no preamble.',
+    userMessage, maxTokens
+  );
+  const clean = text.replace(/```json|```/g,'').trim();
+  return JSON.parse(clean);
+}
+
+function thinking(container, msg = 'Agent is reasoning…') {
+  const el = document.createElement('div');
+  el.className = 'thinking';
+  el.innerHTML = `<div class="thinking-dots"><span></span><span></span><span></span></div><span>${msg}</span>`;
+  container.appendChild(el);
+  return el;
+}
+
+// ═══════════════════════════════════════════════════════
+// GLOBAL STATE
+// ═══════════════════════════════════════════════════════
+const STATE = {
+  sessions: [],
+  agentStats: {
+    retrieval:   { uses:0, correct:0, total:0, lastUsed:null },
+    spacing:     { uses:0, reviewed:0, due:2, lastUsed:null },
+    interleaving:{ uses:0, completed:0, lastUsed:null },
+    generation:  { uses:0, cases:0, lastUsed:null },
+    elaboration: { uses:0, depth:0, lastUsed:null },
+    reflection:  { uses:0, entries:0, lastUsed:null },
+    difficulty:  { uses:0, level:2, lastUsed:null }
+  },
+  conceptMastery: {
+    'STEMI ECG criteria': 0.55, 'Killip classification': 0.72,
+    'Troponin kinetics': 0.80, 'Door-to-balloon': 0.45,
+    'Fibrinolysis indications': 0.60, 'Post-MI complications': 0.38,
+    'DAPT regimen': 0.68, 'Cardiogenic shock': 0.30,
+  },
+  learnerProfile: {
+    retrievalAccuracy: 0.67,
+    spacingCompliance: 0.80,
+    reflectionEngagement: 0.40,
+    difficultyLevel: 2,
+  },
+  agentMemory: {
+    retrieval: [],
+    spacing: [],
+    generation: [],
+    reflection: [],
+    elaboration: [],
+    difficulty: []
+  }
+};
+
+const AGENTS = [
+  { id:'retrieval',    label:'Retrieval',    color:'#5b9bd5', theory:'Testing Effect' },
+  { id:'spacing',      label:'Spacing',      color:'#4caf7d', theory:'Forgetting Curve' },
+  { id:'interleaving', label:'Interleaving', color:'#c4813a', theory:'Discrimination Learning' },
+  { id:'generation',   label:'Generation',   color:'#c0604a', theory:'Generation Effect' },
+  { id:'elaboration',  label:'Elaboration',  color:'#6aab44', theory:'Semantic Encoding' },
+  { id:'reflection',   label:'Reflection',   color:'#9b7fd4', theory:'Metacognition' },
+  { id:'difficulty',   label:'Difficulty',   color:'#c4607a', theory:'Desirable Difficulties' },
+];
+
+function logEvent(agentId, eventType, data={}) {
+  const s = STATE.agentStats[agentId]; if (!s) return;
+  s.uses++; s.lastUsed = new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
+  STATE.sessions.push({ agentId, eventType, data, time: Date.now() });
+  if (eventType==='correct') { s.correct=(s.correct||0)+1; s.total=(s.total||0)+1; }
+  if (eventType==='incorrect') s.total=(s.total||0)+1;
+  if (eventType==='reflection_saved') s.entries=(s.entries||0)+1;
+  if (eventType==='case_complete') s.cases=(s.cases||0)+1;
+  if (eventType==='elaboration_depth') s.depth=Math.max(s.depth||0,data.depth||0);
+  if (eventType==='difficulty_submit') { s.level=data.level||2; s.submissions=(s.submissions||0)+1; }
+  renderDashboard(); renderRecommend();
+}
+
+// ═══════════════════════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════════════════════
+function renderDashboard() {
+  const el = document.getElementById('dash-body');
+  const stats = STATE.agentStats;
+  const totalUses = Object.values(stats).reduce((a,s)=>a+s.uses,0);
+  const avgM = Math.round(Object.values(STATE.conceptMastery).reduce((a,v)=>a+v,0)/8*100);
+  const acc = stats.retrieval.total ? Math.round(stats.retrieval.correct/stats.retrieval.total*100) : '—';
+
+  el.innerHTML = `
+    <div class="stat-grid">
+      <div class="stat-box"><div class="stat-num">${totalUses}</div><div class="stat-lbl">agent activations</div></div>
+      <div class="stat-box"><div class="stat-num">${avgM}%</div><div class="stat-lbl">avg mastery</div></div>
+      <div class="stat-box"><div class="stat-num">${typeof acc==='number'?acc+'%':acc}</div><div class="stat-lbl">retrieval accuracy</div></div>
+      <div class="stat-box"><div class="stat-num">${stats.spacing.due}</div><div class="stat-lbl">due for review</div></div>
+    </div>
+    <div class="card">
+      <div class="sec">Concept mastery</div>
+      ${Object.entries(STATE.conceptMastery).map(([k,v])=>{
+        const pct=Math.round(v*100);
+        const col=v>=0.75?'#4caf7d':v>=0.50?'#d4a853':'#e05252';
+        return `<div style="margin-bottom:11px">
+          <div class="flex-between" style="margin-bottom:4px">
+            <span style="font-size:12px;color:var(--text)">${k}</span>
+            <span style="font-size:11px;color:var(--text3)">${pct}%</span>
+          </div>
+          <div class="bar-wrap"><div class="bar-fill" style="width:${pct}%;background:${col}"></div></div>
+        </div>`;
+      }).join('')}
+    </div>
+    <div class="card">
+      <div class="sec">Agent activity</div>
+      ${AGENTS.map(a=>{
+        const s=stats[a.id];
+        return `<div class="agent-row" onclick="goTo('${a.id}')">
+          <div class="nav-dot" style="background:${s.uses>0?a.color:'var(--line2)'}"></div>
+          <span style="font-size:12px;color:var(--text);flex:1">${a.label}</span>
+          <span style="font-size:11px;color:var(--text3)">${a.theory}</span>
+          <span style="font-size:11px;color:var(--text2);margin-left:8px">${s.uses} use${s.uses!==1?'s':''}</span>
+          <span style="font-size:10px;color:var(--text3);margin-left:8px">${s.lastUsed||'unused'}</span>
+        </div>`;
+      }).join('')}
+    </div>
+    <div class="card">
+      <div class="sec">Learner profile</div>
+      ${[
+        ['Retrieval accuracy', Math.round(STATE.learnerProfile.retrievalAccuracy*100)+'%', STATE.learnerProfile.retrievalAccuracy, '#5b9bd5'],
+        ['Spacing compliance', Math.round(STATE.learnerProfile.spacingCompliance*100)+'%', STATE.learnerProfile.spacingCompliance, '#4caf7d'],
+        ['Reflection engagement', Math.round(STATE.learnerProfile.reflectionEngagement*100)+'%', STATE.learnerProfile.reflectionEngagement, '#9b7fd4'],
+        ['Current difficulty', STATE.learnerProfile.difficultyLevel+'/4', STATE.learnerProfile.difficultyLevel/4, '#c4607a'],
+      ].map(([l,val,frac,col])=>`<div class="flex-row">
+        <span style="font-size:12px;color:var(--text2);width:165px;flex-shrink:0">${l}</span>
+        <div class="bar-wrap"><div class="bar-fill" style="width:${Math.round(frac*100)}%;background:${col}"></div></div>
+        <span style="font-size:11px;color:var(--text);width:36px;text-align:right;flex-shrink:0">${val}</span>
+      </div>`).join('')}
+    </div>
+    ${STATE.sessions.length ? `<div class="card">
+      <div class="sec">Session log</div>
+      ${STATE.sessions.slice(-5).reverse().map(ev=>{
+        const m=AGENTS.find(a=>a.id===ev.agentId);
+        return `<div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:0.5px solid var(--line)">
+          <div style="width:6px;height:6px;border-radius:50%;background:${m?.color||'#555'};flex-shrink:0"></div>
+          <span style="font-size:12px;color:var(--text);flex:1">${m?.label||ev.agentId} — ${ev.eventType}</span>
+          <span style="font-size:10px;color:var(--text3)">${new Date(ev.time).toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'})}</span>
+        </div>`;
+      }).join('')}
+    </div>` : ''}`;
+}
+
+// ═══════════════════════════════════════════════════════
+// RECOMMEND (AI-powered)
+// ═══════════════════════════════════════════════════════
+async function renderRecommend() {
+  const el = document.getElementById('rec-body');
+
+  // Deterministic fast render first
+  const staticRecs = computeStaticRecs();
+  el.innerHTML = renderRecCards(staticRecs, false);
+
+  // Then upgrade with AI reasoning
+  const t = thinking(el, 'Orchestrator analysing your learning state…');
+  try {
+    const profile = {
+      retrievalAccuracy: STATE.learnerProfile.retrievalAccuracy,
+      spacingDue: STATE.agentStats.spacing.due,
+      weakConcepts: Object.entries(STATE.conceptMastery).filter(([,v])=>v<0.5).map(([k])=>k),
+      unusedAgents: AGENTS.filter(a=>STATE.agentStats[a.id].uses===0).map(a=>a.label),
+      sessionCount: STATE.sessions.length,
+      reflectionEngagement: STATE.learnerProfile.reflectionEngagement,
+      difficultyLevel: STATE.learnerProfile.difficultyLevel
+    };
+    const result = await callClaudeJSON(
+      `You are the orchestrator of a 7-agent learning system for healthcare education on Myocardial Infarction. The 7 agents are: Retrieval (testing effect), Spacing (forgetting curve/SM-2), Interleaving (discrimination learning), Generation (generation effect), Elaboration (elaborative interrogation), Reflection (metacognition), Difficulty (desirable difficulties Bjork). Given a learner profile, rank all 7 agents by current learning need and give a brief rationale for each. Return JSON: {"rankings": [{"agent": "name", "urgency": "high|medium|low", "rationale": "1 sentence"}]}`,
+      `Learner profile: ${JSON.stringify(profile)}`
+    );
+    t.remove();
+    el.innerHTML = '';
+    // Merge AI rationale with static scores
+    const merged = staticRecs.map(r => {
+      const aiRec = result.rankings.find(x => x.agent.toLowerCase().includes(r.id));
+      return { ...r, reason: aiRec?.rationale || r.reason, urgency: aiRec?.urgency || r.urgency };
+    });
+    el.innerHTML = renderRecCards(merged, true);
+    el.innerHTML += `<div class="card" style="margin-top:4px">
+      <div class="sec">About the orchestrator</div>
+      <div style="font-size:12px;color:var(--text3);line-height:1.7">Rankings are generated by Claude claude-sonnet-4-20250514 reasoning over your live learner profile: retrieval accuracy, spacing urgency, concept mastery gaps, agent use history, reflection engagement, and current difficulty level. Rankings update after every agent interaction.</div>
+    </div>`;
+  } catch(e) {
+    t.remove();
+    el.innerHTML = renderRecCards(staticRecs, false);
+    el.innerHTML += `<div class="feedback warning show">API unavailable — showing rule-based recommendations. Add your API key to enable AI reasoning.</div>`;
+  }
+}
+
+function computeStaticRecs() {
+  const st = STATE.agentStats; const lp = STATE.learnerProfile;
+  const weakConcepts = Object.values(STATE.conceptMastery).filter(v=>v<0.5).length;
+  return AGENTS.map(a => {
+    let score=0, reason='', urgency='low';
+    if(a.id==='spacing'&&st.spacing.due>0){score=40;urgency='high';reason=`${st.spacing.due} concepts at forgetting threshold.`;}
+    if(a.id==='retrieval'&&lp.retrievalAccuracy<0.75){score=Math.max(score,35);urgency='high';reason=reason||`Retrieval accuracy at ${Math.round(lp.retrievalAccuracy*100)}% — below mastery threshold.`;}
+    if(a.id==='elaboration'&&st.elaboration.uses===0&&lp.retrievalAccuracy>0.6){score=Math.max(score,30);urgency='medium';reason=`Not yet used — ready for deeper mechanistic work.`;}
+    if(a.id==='generation'&&st.generation.uses===0){score=Math.max(score,25);urgency='medium';reason=`Not yet used — generation before explanation creates durable encoding.`;}
+    if(a.id==='interleaving'&&st.interleaving.uses===0){score=Math.max(score,22);urgency='medium';reason=`Not yet used — mix topics to build discrimination and transfer.`;}
+    if(a.id==='reflection'&&lp.reflectionEngagement<0.5){score=Math.max(score,20);reason=reason||`Reflection engagement low — consolidate learning with structured review.`;}
+    if(a.id==='difficulty'&&lp.retrievalAccuracy>0.85){score=Math.max(score,18);reason=reason||`High accuracy — increase difficulty to stay in the productive zone.`;}
+    if(score===0){score=5+Math.floor(Math.random()*8);reason=`Supports durable learning at this stage.`;}
+    return {...a, score, reason, urgency};
+  }).sort((a,b)=>b.score-a.score);
+}
+
+function renderRecCards(recs, aiPowered) {
+  const top = recs[0];
+  const badge = u => `<span style="font-size:10px;padding:2px 8px;border-radius:20px;border:0.5px solid ${u==='high'?'rgba(224,82,82,0.4)':u==='medium'?'rgba(212,168,83,0.4)':'var(--line)'};color:${u==='high'?'#e88':u==='medium'?'var(--gold)':'var(--text3)'}">${u}</span>`;
+  return `
+    <div class="card glow">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+        <div style="width:36px;height:36px;border-radius:50%;border:0.5px solid ${top.color};display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <div style="width:9px;height:9px;border-radius:50%;background:${top.color}"></div>
+        </div>
+        <div style="flex:1">
+          <div style="font-family:var(--font-serif);font-size:17px;color:var(--text)">${top.label} Agent</div>
+          <div style="font-size:11px;color:var(--text3)">${top.theory}${aiPowered?' · AI-ranked':''}</div>
+        </div>
+        ${badge(top.urgency)}
+      </div>
+      <div style="font-size:13px;color:var(--text2);line-height:1.65;margin-bottom:14px">${top.reason}</div>
+      <button class="btn primary" onclick="goTo('${top.id}')">Launch ${top.label} Agent →</button>
+    </div>
+    <div class="card">
+      <div class="sec">All agents ranked${aiPowered?' · AI-generated':' · rule-based'}</div>
+      ${recs.map((r,i)=>`<div class="rec-item${i===0?' top':''}" onclick="goTo('${r.id}')">
+        <div style="display:flex;align-items:center;gap:8px">
+          <span style="font-size:10px;color:var(--text3);width:16px">${i+1}</span>
+          <div class="nav-dot" style="background:${r.color}"></div>
+          <span style="font-size:12px;font-weight:${i===0?'600':'400'};color:var(--text);flex:1">${r.label}</span>
+          ${badge(r.urgency)}
+        </div>
+        <div class="rec-bar"><div class="rec-bar-fill" style="width:${Math.round(r.score/recs[0].score*100)}%;background:${r.color}"></div></div>
+        <div style="font-size:11px;color:var(--text3);margin-top:6px">${r.reason}</div>
+      </div>`).join('')}
+    </div>`;
+}
+
+// ═══════════════════════════════════════════════════════
+// AGENT 1 — RETRIEVAL (true agent: generates questions, semantically assesses answers)
+// ═══════════════════════════════════════════════════════
+(function() {
+  const body = document.getElementById('ret-body');
+  const SYS = `You are the Retrieval Agent, an AI tutor implementing retrieval practice theory (testing effect, Roediger & Karpicke 2006) for a healthcare professional learning about Myocardial Infarction. Your role: (1) generate clinically accurate, educationally appropriate retrieval questions at varying cognitive levels; (2) semantically assess free-text answers — not just keyword matching but genuine understanding; (3) provide corrective feedback that re-encodes correct schema; (4) adaptively generate the NEXT question based on gaps you identify. Always be precise, evidence-based, and use real clinical scenarios.`;
+  let history = [], questionCount = 0;
+
+  async function startSession() {
+    body.innerHTML = `<div class="card"><div class="sec">Starting retrieval session…</div></div>`;
+    const t = thinking(body, 'Agent generating your first question…');
+    try {
+      const q = await callClaude(SYS,
+        `Generate a challenging retrieval question about Myocardial Infarction for a healthcare learner. Pick one of: ECG interpretation, pathophysiology, pharmacology, clinical management, or complications. Return ONLY the question text — no preamble, no answer.`);
+      t.remove();
+      history.push({ role:'assistant', content: q });
+      renderQuestion(q);
+    } catch(e) { t.remove(); body.innerHTML = apiError(); console.error(e); }
+  }
+
+  function renderQuestion(qText) {
+    questionCount++;
+    body.innerHTML = `<div class="card">
+      <div class="sec">Question ${questionCount} — free recall</div>
+      <div class="qtext">${qText}</div>
+      <textarea id="ret-ans" placeholder="Write your full answer — the agent will assess your understanding, not just keywords…" style="min-height:110px"></textarea>
+      <div class="btn-row">
+        <button class="btn primary" onclick="submitAnswer()">Submit for assessment</button>
+        <button class="btn" onclick="skipQuestion()">Generate different question</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="sec">Retrieval principle</div>
+      <div style="font-size:12px;color:var(--text3);line-height:1.7">This agent reads your answer semantically — it detects partial knowledge, misconceptions, and gaps that keyword matching misses. The next question is generated based on what it finds.</div>
+    </div>`;
+
+    window.submitAnswer = async () => {
+      const ans = document.getElementById('ret-ans')?.value?.trim();
+      if (!ans) return;
+      const t = thinking(body, 'Agent assessing your answer…');
+      history.push({ role:'user', content: `My answer: ${ans}` });
+      try {
+        const assessment = await callClaudeJSON(SYS,
+          `The learner answered this MI question: "${qText}"\n\nTheir answer: "${ans}"\n\nAssess their response and return JSON: {"correct": true/false, "score": 0-100, "feedback": "2-3 sentence corrective explanation with correct clinical detail", "gaps": ["specific gap 1", "specific gap 2"], "next_question": "A follow-up question targeting the most critical gap you identified"}`,
+          700);
+        t.remove();
+        logEvent('retrieval', assessment.correct ? 'correct' : 'incorrect', { score: assessment.score });
+        STATE.learnerProfile.retrievalAccuracy = (STATE.agentStats.retrieval.correct / Math.max(1, STATE.agentStats.retrieval.total));
+        const keys = Object.keys(STATE.conceptMastery);
+        if (questionCount <= keys.length) STATE.conceptMastery[keys[questionCount-1]] = Math.min(1, STATE.conceptMastery[keys[questionCount-1]] + (assessment.correct ? 0.10 : -0.04));
+        body.innerHTML = `<div class="card">
+          <div class="sec">Question ${questionCount}</div>
+          <div class="qtext">${qText}</div>
+          <div style="padding:12px 14px;background:var(--bg);border:0.5px solid var(--line2);border-radius:8px;font-size:13px;color:var(--text2);margin-bottom:10px;font-style:italic">${ans}</div>
+        </div>
+        <div class="card">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+            <div style="width:32px;height:32px;border-radius:50%;background:${assessment.correct?'rgba(76,175,125,0.15)':'rgba(224,82,82,0.15)'};border:0.5px solid ${assessment.correct?'var(--green)':'var(--red)'};display:flex;align-items:center;justify-content:center;font-size:14px">${assessment.correct?'✓':'✗'}</div>
+            <div><div style="font-size:13px;font-weight:600;color:var(--text)">${assessment.correct?'Correct':'Needs work'} · ${assessment.score}/100</div>
+            <div style="font-size:11px;color:var(--text3)">Agent assessment</div></div>
+          </div>
+          <div class="ai-label">AI feedback</div>
+          <div class="ai-response">${assessment.feedback}</div>
+          ${assessment.gaps?.length ? `<div style="margin-top:10px"><div class="sec">Identified gaps</div>${assessment.gaps.map(g=>`<div style="font-size:11px;color:var(--text3);padding:3px 0;border-bottom:0.5px solid var(--line)">· ${g}</div>`).join('')}</div>` : ''}
+        </div>
+        ${assessment.next_question ? `<div class="card">
+          <div class="sec">Agent-generated follow-up — targeting your gap</div>
+          <div class="qtext">${assessment.next_question}</div>
+          <textarea id="ret-ans2" placeholder="Answer the follow-up…" style="min-height:90px"></textarea>
+          <div class="btn-row">
+            <button class="btn primary" onclick="submitFollowUp('${encodeURIComponent(assessment.next_question)}')">Submit</button>
+            <button class="btn" onclick="startSession()">New question</button>
+          </div>
+        </div>` : `<div class="btn-row"><button class="btn primary" onclick="startSession()">Next question →</button></div>`}`;
+      } catch(e) { t.remove(); body.innerHTML += apiError(); console.error(e); }
+    };
+
+    window.skipQuestion = () => startSession();
+  }
+
+  window.submitFollowUp = async (encodedQ) => {
+    const q = decodeURIComponent(encodedQ);
+    const ans = document.getElementById('ret-ans2')?.value?.trim();
+    if (!ans) return;
+    const t = thinking(body, 'Assessing follow-up…');
+    try {
+      const fb = await callClaude(SYS, `Follow-up question: "${q}"\nLearner answer: "${ans}"\nGive concise corrective feedback (2-3 sentences) with the clinically correct information.`, 400);
+      t.remove();
+      logEvent('retrieval', 'followup', {});
+      body.innerHTML += `<div class="card"><div class="ai-label">Follow-up feedback</div><div class="ai-response">${fb}</div>
+        <div class="btn-row"><button class="btn primary" onclick="startSession()">Continue →</button></div></div>`;
+    } catch(e) { t.remove(); body.innerHTML += apiError(); console.error(e); }
+  };
+
+  startSession();
+})();
+
+// ═══════════════════════════════════════════════════════
+// AGENT 2 — SPACING (true agent: reads recall attempt, infers retention, sets interval)
+// ═══════════════════════════════════════════════════════
+(function() {
+  const body = document.getElementById('sp-body');
+  const SYS = `You are the Spacing Agent, implementing spaced repetition theory (Ebbinghaus forgetting curve, SM-2 algorithm). Your role: (1) present a concept due for review; (2) read the learner's free-text recall attempt; (3) infer their actual retention level from the quality, specificity, and accuracy of what they wrote — not just whether they wrote something; (4) set the next review interval accordingly; (5) explain what they missed. Topic: Myocardial Infarction.`;
+
+  const concepts = [
+    { name:'STEMI ECG criteria', daysAgo:15, interval:14, reps:4, base:82 },
+    { name:'Door-to-balloon time targets', daysAgo:4, interval:3, reps:1, base:40 },
+    { name:'Fibrinolysis absolute contraindications', daysAgo:10, interval:10, reps:3, base:55 },
+    { name:'Post-MI mechanical complications', daysAgo:8, interval:7, reps:2, base:38 },
+    { name:'Cardiogenic shock management', daysAgo:1, interval:1, reps:0, base:0 },
+  ];
+
+  function ret(c) { return c.reps===0?0:Math.max(5,Math.round(c.base*Math.exp(-c.daysAgo/(c.interval*0.7)))); }
+  function status(c) { if(c.reps===0)return'new'; if(c.daysAgo>=c.interval)return'due'; if(c.daysAgo>=c.interval*0.7)return'soon'; return'fresh'; }
+
+  let reviewIdx = 0;
+  const due = concepts.filter(c => status(c)==='due'||status(c)==='new');
+
+  function renderDash() {
+    body.innerHTML = `<div class="stat-grid two">
+      <div class="stat-box"><div class="stat-num">${due.length}</div><div class="stat-lbl">due for review</div></div>
+      <div class="stat-box"><div class="stat-num">${concepts.filter(c=>status(c)==='fresh').length}</div><div class="stat-lbl">on track</div></div>
+    </div>
+    <div class="card">
+      <div class="sec">Forgetting curve — concept schedule</div>
+      ${concepts.map(c=>{
+        const st=status(c), r=ret(c);
+        const col={due:'#e05252',soon:'#d4a853',fresh:'#4caf7d',new:'#5b9bd5'}[st];
+        const lbl={due:'review now',soon:'due soon',fresh:'on track',new:'not started'}[st];
+        return `<div style="margin-bottom:13px">
+          <div class="flex-between" style="margin-bottom:4px">
+            <span style="font-size:12px;color:var(--text)">${c.name}</span>
+            <span style="font-size:10px;color:${col};border:0.5px solid ${col}44;padding:2px 8px;border-radius:20px">${lbl}</span>
+          </div>
+          <div class="flex-row" style="margin-bottom:2px">
+            <div class="bar-wrap"><div class="bar-fill" style="width:${r}%;background:${col}"></div></div>
+            <span style="font-size:10px;color:var(--text3);width:55px;text-align:right;flex-shrink:0">${c.reps===0?'new':r+'% ret.'}</span>
+          </div>
+          <div style="font-size:10px;color:var(--text3)">${c.reps===0?'Never reviewed':'Rep '+c.reps+' · ivl '+c.interval+'d · '+c.daysAgo+'d ago'}</div>
+        </div>`;
+      }).join('')}
+    </div>
+    ${due.length ? `<button class="btn primary" onclick="startSpacingReview()">Start AI review session (${due.length} items)</button>` : '<div class="feedback success show">All items on schedule.</div>'}`;
+    window.startSpacingReview = startReview;
+  }
+
+  async function startReview() {
+    if (reviewIdx >= due.length) { body.innerHTML = `<div class="feedback success show">All due items reviewed. Intervals updated by the agent.</div><div class="btn-row"><button class="btn" onclick="renderSpDash()">Back to schedule</button></div>`; window.renderSpDash=renderDash; return; }
+    const concept = due[reviewIdx];
+    body.innerHTML = `<div class="card">
+      <div class="sec">Spaced review ${reviewIdx+1}/${due.length} · ${concept.name}</div>
+      <div class="qtext">Recall everything you know about <strong>${concept.name}</strong> without looking it up.</div>
+      <textarea id="sp-recall" placeholder="Write your recall here — the agent will read it and infer your retention level from the quality and specificity of what you write…" style="min-height:110px"></textarea>
+      <div class="btn-row"><button class="btn primary" onclick="submitRecall('${concept.name}')">Submit recall</button></div>
+    </div>`;
+    window.submitRecall = submitRecallFn;
+  }
+
+  async function submitRecallFn(name) {
+    const recall = document.getElementById('sp-recall')?.value?.trim();
+    if (!recall) return;
+    const concept = due.find(c=>c.name===name);
+    const t = thinking(body, 'Agent reading your recall and inferring retention…');
+    try {
+      const result = await callClaudeJSON(SYS,
+        `Concept being reviewed: "${name}"\nLearner's recall attempt: "${recall}"\n\nAssess their retention and return JSON: {"retention_score": 0-100, "interval_days": 1-30, "what_they_got_right": "brief", "what_they_missed": "specific gaps with correct information", "verdict": "forgotten|partial|good|excellent"}`,
+        600);
+      t.remove();
+      concept.interval = result.interval_days; concept.daysAgo = 0; concept.reps++;
+      if(concept.name in STATE.conceptMastery) STATE.conceptMastery[concept.name] = Math.min(1, (STATE.conceptMastery[concept.name]||0.5) + (result.retention_score>70?0.08:0.02));
+      logEvent('spacing','review_rated',{concept:name, retention:result.retention_score});
+      STATE.agentStats.spacing.due = Math.max(0, STATE.agentStats.spacing.due - 1);
+      body.innerHTML = `<div class="card">
+        <div class="sec">Agent assessment · ${name}</div>
+        <div style="display:flex;align-items:center;gap:14px;padding:12px;background:var(--bg);border-radius:8px;margin-bottom:12px">
+          <div style="font-family:var(--font-serif);font-size:28px;color:var(--text)">${result.retention_score}%</div>
+          <div><div style="font-size:12px;font-weight:600;color:var(--text);text-transform:capitalize">${result.verdict}</div>
+          <div style="font-size:11px;color:var(--text3)">Next review in ${result.interval_days} days</div></div>
+        </div>
+        ${result.what_they_got_right?`<div style="margin-bottom:8px"><div class="sec">What you got right</div><div style="font-size:12px;color:var(--text3)">${result.what_they_got_right}</div></div>`:''}
+        <div class="ai-label">Gaps identified by agent</div>
+        <div class="ai-response">${result.what_they_missed}</div>
+        <div class="btn-row"><button class="btn primary" onclick="reviewIdx++;startReview()">Next item →</button></div>
+      </div>`;
+    } catch(e) { t.remove(); body.innerHTML += apiError(); console.error(e); }
+  }
+
+  renderDash();
+})();
+
+// ═══════════════════════════════════════════════════════
+// AGENT 3 — INTERLEAVING (generates mixed-domain questions, assesses domain identification)
+// ═══════════════════════════════════════════════════════
+(function() {
+  const body = document.getElementById('il-body');
+  const SYS = `You are the Interleaving Agent, implementing interleaved practice theory (Kornell & Bjork 2008) for Myocardial Infarction education. You generate questions from randomly mixed domains (Pathophysiology, Pharmacology, ECG interpretation, Clinical management) without revealing the domain. After the learner answers, you: (1) reveal which domain the question belonged to; (2) assess whether they correctly identified the domain; (3) score their answer; (4) explain the correct reasoning. The key pedagogical goal: force the learner to identify WHICH type of problem they're facing before solving it.`;
+  let sessionCount = 0;
+
+  async function generateQuestion() {
+    sessionCount++;
+    body.innerHTML = '';
+    const t = thinking(body, 'Agent selecting domain and generating interleaved question…');
+    try {
+      const result = await callClaudeJSON(SYS,
+        `Generate an interleaved MI question. Randomly pick one domain: Pathophysiology, Pharmacology, ECG interpretation, or Clinical management. Create a challenging, clinically realistic question. Do NOT reveal the domain in the question text. Return JSON: {"domain": "chosen domain", "question": "the question text", "domain_cue": "what feature of this question signals its domain (explain after reveal)"}`,
+        400);
+      t.remove();
+      body.innerHTML = `<div class="card">
+        <div class="sec">Interleaved question ${sessionCount} · domain hidden</div>
+        <div class="feedback info show" style="margin-bottom:14px;font-size:12px">Identify which MI domain this question belongs to before answering. Domain revealed after you submit.</div>
+        <div class="qtext">${result.question}</div>
+        <div style="margin-bottom:10px">
+          <div class="sec">Which domain is this?</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            ${['Pathophysiology','Pharmacology','ECG interpretation','Clinical management'].map(d=>`<button class="btn sm domain-btn" data-domain="${d}">${d}</button>`).join('')}
+          </div>
+        </div>
+        <textarea id="il-ans" placeholder="Your answer…" style="min-height:90px"></textarea>
+        <div class="btn-row"><button class="btn primary" onclick="submitIL()">Submit</button></div>
+      </div>`;
+      document.querySelectorAll('.domain-btn').forEach(b => b.onclick = () => {
+        document.querySelectorAll('.domain-btn').forEach(x => x.classList.remove('primary'));
+        b.classList.add('primary');
+      });
+      window.submitIL = async () => {
+        const selectedDomain = document.querySelector('.domain-btn.primary')?.dataset?.domain;
+        const ans = document.getElementById('il-ans')?.value?.trim();
+        if (!ans) return;
+        const t2 = thinking(body, 'Agent assessing domain identification and answer quality…');
+        try {
+          const fb = await callClaudeJSON(SYS,
+            `Question: "${result.question}"\nCorrect domain: "${result.domain}"\nLearner selected domain: "${selectedDomain||'not selected'}"\nLearner answer: "${ans}"\nDomain cue: "${result.domain_cue}"\n\nReturn JSON: {"domain_correct": true/false, "answer_score": 0-100, "domain_feedback": "why this question belongs to this domain", "answer_feedback": "assessment of their clinical answer", "interleaving_insight": "what this mix of domains teaches"}`,
+            600);
+          t2.remove();
+          logEvent('interleaving','interleave_reveal',{domain:result.domain,correct:fb.domain_correct});
+          const col = {Pathophysiology:'#5b9bd5',Pharmacology:'#4caf7d','ECG interpretation':'#c4813a','Clinical management':'#c4607a'}[result.domain]||'var(--accent)';
+          body.innerHTML = `<div class="card">
+            <div style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:600;background:${col}20;color:${col};margin-bottom:10px;border:0.5px solid ${col}44">Domain revealed: ${result.domain}</div>
+            <div class="qtext">${result.question}</div>
+            <div style="font-size:12px;color:var(--text2);background:var(--bg);border-radius:8px;padding:10px 12px;margin-bottom:10px;font-style:italic">${ans}</div>
+          </div>
+          <div class="card">
+            <div style="display:flex;gap:12px;margin-bottom:12px">
+              <div style="flex:1;padding:10px;background:var(--bg);border-radius:8px;border:0.5px solid ${fb.domain_correct?'rgba(76,175,125,0.3)':'rgba(224,82,82,0.3)'}">
+                <div style="font-size:10px;color:var(--text3);margin-bottom:4px">Domain ID</div>
+                <div style="font-size:13px;color:${fb.domain_correct?'#7dd4a8':'#e88'}">${fb.domain_correct?'Correct':'Incorrect'}</div>
+              </div>
+              <div style="flex:1;padding:10px;background:var(--bg);border-radius:8px;border:0.5px solid var(--line2)">
+                <div style="font-size:10px;color:var(--text3);margin-bottom:4px">Answer score</div>
+                <div style="font-family:var(--font-serif);font-size:18px;color:var(--text)">${fb.answer_score}/100</div>
+              </div>
+            </div>
+            <div class="ai-label">Why this belongs to ${result.domain}</div>
+            <div class="ai-response" style="margin-bottom:10px">${fb.domain_feedback}</div>
+            <div class="ai-label">Answer assessment</div>
+            <div class="ai-response" style="margin-bottom:10px">${fb.answer_feedback}</div>
+            <div class="ai-label">Interleaving insight</div>
+            <div class="ai-response">${fb.interleaving_insight}</div>
+            <div class="btn-row"><button class="btn primary" onclick="generateILQuestion()">Next question →</button></div>
+          </div>`;
+          window.generateILQuestion = generateQuestion;
+        } catch(e) { t2.remove(); body.innerHTML += apiError(); console.error(e); }
+      };
+    } catch(e) { t.remove(); body.innerHTML = apiError(); console.error(e); }
+  }
+
+  generateQuestion();
+  window.generateILQuestion = generateQuestion;
+})();
+
+// ═══════════════════════════════════════════════════════
+// AGENT 4 — GENERATION (reads generation attempt, identifies specific gaps)
+// ═══════════════════════════════════════════════════════
+(function() {
+  const body = document.getElementById('gen-body');
+  const SYS = `You are the Generation Agent, implementing the generation effect (Slamecka & Graf 1978) for MI education. You: (1) present a concept cue that prompts the learner to generate knowledge before seeing the answer; (2) read their generation carefully; (3) compare it to expert-level knowledge; (4) identify SPECIFIC conceptual gaps — not just missing facts but missing understanding; (5) ask a targeted consolidation question about the most important gap. Your goal is to make the generation-correction cycle as educationally potent as possible.`;
+
+  const cues = [
+    'Describe what happens at the cellular level in the first 30 minutes of complete coronary occlusion — before looking anything up.',
+    'Generate everything you know about why reperfusion after prolonged ischemia can paradoxically cause additional myocardial injury.',
+    'Describe the hemodynamic sequence that leads to cardiogenic shock in large anterior STEMI — the pathophysiological chain.',
+    'Generate your understanding of why high-sensitivity troponin stays elevated for 7–14 days when CK-MB normalizes in 48–72 hours.',
+  ];
+
+  let cueIdx = 0;
+
+  function renderCue() {
+    const cue = cues[cueIdx % cues.length];
+    body.innerHTML = `<div class="card">
+      <div class="sec">Case ${cueIdx+1} · Step 1: Generate</div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">
+        ${['Generate','Compare','Consolidate'].map((s,i)=>`<div style="display:flex;align-items:center;gap:5px">
+          <div style="width:18px;height:18px;border-radius:50%;background:${i===0?'var(--accent)':'var(--bg4)'};border:0.5px solid ${i===0?'var(--accent)':'var(--line2)'};display:flex;align-items:center;justify-content:center;font-size:9px;color:${i===0?'var(--bg)':'var(--text3)'};">${i+1}</div>
+          <span style="font-size:11px;color:${i===0?'var(--text)':'var(--text3)'}">${s}</span>
+        </div>${i<2?'<span style="color:var(--line3);font-size:11px">→</span>':''}`).join('')}
+      </div>
+      <div class="qtext">${cue}</div>
+      <div class="feedback info show" style="margin-bottom:12px;font-size:12px">Write freely — errors are expected and valuable. The agent reads the quality and depth of your thinking, not just whether facts are correct.</div>
+      <textarea id="gen-ta" placeholder="Your generation here…" style="min-height:120px"></textarea>
+      <div class="btn-row"><button class="btn primary" onclick="submitGeneration('${encodeURIComponent(cue)}')">Submit for agent analysis →</button></div>
+    </div>`;
+    window.submitGeneration = submitGen;
+  }
+
+  async function submitGen(encodedCue) {
+    const cue = decodeURIComponent(encodedCue);
+    const gen = document.getElementById('gen-ta')?.value?.trim();
+    if (!gen) return;
+    const t = thinking(body, 'Agent comparing your generation to expert knowledge…');
+    try {
+      const result = await callClaudeJSON(SYS,
+        `Generation cue: "${cue}"\nLearner's generation: "${gen}"\n\nAnalyse and return JSON: {"expert_answer": "comprehensive expert-level answer (4-6 sentences)", "what_learner_captured": "specific things they got right", "key_gaps": ["gap 1 with brief correct info", "gap 2 with brief correct info", "gap 3 with brief correct info"], "most_important_gap": "the single most clinically significant thing they missed", "consolidation_question": "a targeted question about the most important gap"}`,
+        800);
+      t.remove();
+      logEvent('generation','case_complete',{cue});
+      body.innerHTML = `<div class="card">
+        <div class="sec">Step 2: Compare</div>
+        <div class="compare-grid">
+          <div><div class="sec">Your generation</div><div class="compare-pane">${gen}</div></div>
+          <div><div class="sec">Expert answer</div><div class="compare-pane" style="color:var(--text)">${result.expert_answer}</div></div>
+        </div>
+        <div class="sec">What you captured</div>
+        <div style="font-size:12px;color:var(--text3);margin-bottom:10px">${result.what_learner_captured}</div>
+        <div class="sec">Key gaps identified by agent</div>
+        ${result.key_gaps.map(g=>`<div style="font-size:12px;color:var(--text2);padding:5px 0;border-bottom:0.5px solid var(--line)">· ${g}</div>`).join('')}
+      </div>
+      <div class="card">
+        <div class="sec">Step 3: Consolidate</div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:4px">Most important gap: ${result.most_important_gap}</div>
+        <div class="qtext" style="font-style:italic">"${result.consolidation_question}"</div>
+        <textarea id="cons-ta" placeholder="Your consolidation answer…" style="min-height:80px"></textarea>
+        <div class="btn-row">
+          <button class="btn primary" onclick="submitConsolidation('${encodeURIComponent(result.consolidation_question)}')">Submit consolidation</button>
+        </div>
+      </div>`;
+      window.submitConsolidation = async (encQ) => {
+        const q = decodeURIComponent(encQ);
+        const ans = document.getElementById('cons-ta')?.value?.trim();
+        if (!ans) return;
+        const t2 = thinking(body, 'Agent assessing consolidation…');
+        const fb = await callClaude(SYS, `Consolidation question: "${q}"\nLearner answer: "${ans}"\nGive focused feedback (2-3 sentences) on whether they addressed the gap. Be specific about what is still missing or confirm what they now understand.`, 350);
+        t2.remove();
+        body.innerHTML += `<div class="card"><div class="ai-label">Consolidation feedback</div><div class="ai-response">${fb}</div>
+          <div class="btn-row"><button class="btn primary" onclick="cueIdx++;renderCue()">Next generation case →</button></div></div>`;
+        window.renderCue = renderCue;
+      };
+    } catch(e) { t.remove(); body.innerHTML += apiError(); console.error(e); }
+  }
+
+  renderCue();
+})();
+
+// ═══════════════════════════════════════════════════════
+// AGENT 5 — ELABORATION (reads elaboration, decides depth, redirects)
+// ═══════════════════════════════════════════════════════
+(function() {
+  const body = document.getElementById('elab-body');
+  const SYS = `You are the Elaboration Agent, implementing elaborative interrogation theory (Pressley et al. 1992) for MI education. You: (1) present a why/how question; (2) read the learner's elaboration; (3) DECIDE — based on the quality of their answer — whether to go DEEPER (they answered well, probe the next mechanism), REDIRECT (they misunderstood something important), or CONSOLIDATE (they've reached adequate depth at this level); (4) generate the appropriate next prompt. You build a Socratic path through mechanistic knowledge. Think of yourself as a Socratic tutor who reads the quality of reasoning, not just the presence of facts.`;
+  let depth = 0, path = [];
+  const rootQuestions = [
+    'Why does acute MI cause cardiogenic shock in some patients but not others?',
+    'Why is reperfusion after prolonged ischemia paradoxically harmful?',
+    'Why does DAPT outperform aspirin alone after primary PCI for STEMI?',
+  ];
+  let rootIdx = 0;
+
+  function startElaboration() {
+    depth = 0; path = [];
+    const q = rootQuestions[rootIdx % rootQuestions.length];
+    path.push(q);
+    renderElabQ(q, 0);
+  }
+
+  function renderElabQ(question, d) {
+    const depthColors = ['#5b9bd5','#4caf7d','#c4607a'];
+    const depthLabels = ['Clinical','Physiological','Molecular'];
+    body.innerHTML = `<div class="card">
+      <div class="sec">Elaboration tree ${rootIdx+1} · depth ${d+1}</div>
+      <div class="depth-tabs">
+        ${[0,1,2].map(i=>`<div class="depth-tab${i===d?' active':''}" style="${i===d?'border-color:'+depthColors[i]+';color:'+depthColors[i]+';background:var(--bg3)':''}">${depthLabels[i]}</div>`).join('')}
+      </div>
+      <div class="qtext">${question}</div>
+      <textarea id="elab-ta" placeholder="Elaborate — explain the mechanism at this depth…" style="min-height:100px"></textarea>
+      <div class="btn-row"><button class="btn primary" onclick="submitElaboration(${d})">Submit elaboration</button></div>
+    </div>
+    <div class="card">
+      <div class="sec">Elaboration path so far</div>
+      ${path.map((q,i)=>`<div style="padding:3px 0;padding-left:${i*14}px;font-size:12px;color:${i===path.length-1?'var(--text)':'var(--text3)'}">${i>0?'↳ ':''}<span style="color:${depthColors[Math.min(i,2)]};font-size:10px">L${i+1}</span> ${q.substring(0,65)}…</div>`).join('')}
+    </div>`;
+    window.submitElaboration = submitElab;
+    window._elabQuestion = question;
+    window._elabDepth = d;
+  }
+
+  async function submitElab(d) {
+    const ans = document.getElementById('elab-ta')?.value?.trim();
+    if (!ans) return;
+    const t = thinking(body, `Agent reading your elaboration and deciding next step…`);
+    logEvent('elaboration','elaboration_depth',{depth:d});
+    STATE.learnerProfile.preferredDepth = Math.max(STATE.learnerProfile.preferredDepth||0, d+1);
+    try {
+      const result = await callClaudeJSON(SYS,
+        `Current question (depth ${d+1}): "${window._elabQuestion}"\nLearner's elaboration: "${ans}"\n\nDecide the next step and return JSON: {"decision": "deeper|redirect|consolidate", "assessment": "1-2 sentences on quality of their elaboration", "next_question": "if deeper or redirect: the next probing question; if consolidate: a summary insight", "reasoning": "why you made this decision"}`,
+        500);
+      t.remove();
+      const depthColors = ['#5b9bd5','#4caf7d','#c4607a'];
+      const decisionColor = result.decision==='deeper'?'#4caf7d':result.decision==='redirect'?'#d4a853':'#9b7fd4';
+      body.innerHTML += `<div class="card">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+          <span style="font-size:11px;padding:3px 10px;border-radius:20px;border:0.5px solid ${decisionColor}44;color:${decisionColor};text-transform:uppercase;letter-spacing:.05em">${result.decision}</span>
+          <span style="font-size:11px;color:var(--text3)">${result.reasoning}</span>
+        </div>
+        <div class="ai-label">Agent assessment</div>
+        <div class="ai-response" style="margin-bottom:10px">${result.assessment}</div>
+        ${result.decision!=='consolidate' ? `
+          <div class="ai-label">${result.decision==='deeper'?'Going deeper →':'Redirecting →'}</div>
+          <div style="font-size:13px;color:var(--text);font-style:italic;margin-bottom:12px">"${result.next_question}"</div>
+          <div class="btn-row">
+            <button class="btn primary" onclick="elabContinue('${encodeURIComponent(result.next_question)}',${Math.min(d+1,2)})">Continue elaboration →</button>
+            <button class="btn" onclick="rootIdx++;startElaboration()">New question tree</button>
+          </div>` : `
+          <div class="ai-label">Consolidation insight</div>
+          <div class="ai-response">${result.next_question}</div>
+          <div class="btn-row"><button class="btn primary" onclick="rootIdx++;startElaboration()">Next question tree →</button></div>`}
+      </div>`;
+      window.elabContinue = (encQ, newDepth) => {
+        const q = decodeURIComponent(encQ);
+        path.push(q);
+        depth = newDepth;
+        renderElabQ(q, newDepth);
+      };
+    } catch(e) { t.remove(); body.innerHTML += apiError(); console.error(e); }
+  }
+
+  startElaboration();
+  window.startElaboration = startElaboration;
+})();
+
+// ═══════════════════════════════════════════════════════
+// AGENT 6 — REFLECTION (reads reflection, identifies blind spots)
+// ═══════════════════════════════════════════════════════
+(function() {
+  const body = document.getElementById('ref-body');
+  const SYS = `You are the Reflection Agent, implementing metacognitive reflection theory (Schön 1983, Flavell 1979) for MI education. You read the learner's reflection and do three things: (1) identify genuine insights — what they are correctly understanding about their own learning; (2) identify blind spots — metacognitive errors, overconfidence, or gaps in self-assessment they don't see; (3) generate a targeted follow-up prompt that challenges their most significant blind spot. You are a Socratic mirror — you reflect back what they cannot see in themselves.`;
+  const journal = [];
+  const frameworks = [
+    { label:'Calibration', icon:'◎', theory:'Dunning-Kruger / Flavell 1979', prompt:'Before this session, how confident were you in your MI knowledge (1–10)? After completing questions, which specific moments revealed a gap between your confidence and actual accuracy? What does this tell you about your self-assessment?' },
+    { label:'Error analysis', icon:'△', theory:'Error-driven learning · Butterfield & Metcalfe 2001', prompt:'Choose the question or concept where you performed worst or were most uncertain. Trace the exact reasoning path that led to your error — was it a knowledge gap, a recall failure, or a faulty reasoning pattern?' },
+    { label:'Connection', icon:'⟡', theory:'Depth-of-processing · Craik & Lockhart 1972', prompt:'Connect one concept from this MI session to a different domain — pharmacology, physiology, a prior clinical experience. Be explicit about the structural or mechanistic similarity you see.' },
+    { label:'Transfer', icon:'→', theory:'Transfer-appropriate processing · Morris et al. 1977', prompt:'Construct a specific clinical scenario (real or imagined) where you would apply today\'s MI learning. Walk through your clinical reasoning step by step — what would you do and why?' },
+  ];
+  let activeF = 0;
+
+  function renderReflect() {
+    const f = frameworks[activeF];
+    body.innerHTML = `
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">
+        ${frameworks.map((fr,i)=>`<button class="btn sm${i===activeF?' primary':''}" onclick="switchRefF(${i})">${fr.icon} ${fr.label}</button>`).join('')}
+      </div>
+      <div class="card">
+        <div class="sec">${f.label} · <em>${f.theory}</em></div>
+        <div style="font-style:italic;font-size:14px;color:var(--text);line-height:1.7;margin-bottom:12px">"${f.prompt}"</div>
+        <textarea id="ref-ta" placeholder="Your reflection…" style="min-height:110px"></textarea>
+        <div class="btn-row"><button class="btn primary" onclick="submitReflection('${f.label}')">Submit for agent analysis</button></div>
+      </div>
+      ${journal.length ? `<div class="card">
+        <div class="sec">Reflection journal (${journal.length} entries)</div>
+        ${journal.slice(-3).reverse().map(e=>`<div class="journal-entry">
+          <div style="font-size:10px;color:var(--text3);margin-bottom:3px">${e.framework} · ${e.time}</div>
+          <div style="font-size:12px;color:var(--text2)">${e.text.substring(0,100)}${e.text.length>100?'…':''}</div>
+          ${e.agentFeedback?`<div style="font-size:11px;color:var(--accent);margin-top:4px;font-style:italic">Agent: ${e.agentFeedback.substring(0,80)}…</div>`:''}
+        </div>`).join('')}
+      </div>` : ''}`;
+    window.switchRefF = i => { activeF=i; renderReflect(); };
+    window.submitReflection = submitRef;
+  }
+
+  async function submitRef(framework) {
+    const text = document.getElementById('ref-ta')?.value?.trim();
+    if (!text) return;
+    const f = frameworks.find(x=>x.label===framework);
+    const t = thinking(body, 'Agent reading your reflection and identifying blind spots…');
+    try {
+      const result = await callClaudeJSON(SYS,
+        `Reflection framework: ${framework} (${f?.theory})\nPrompt given: "${f?.prompt}"\nLearner's reflection: "${text}"\n\nAnalyse and return JSON: {"genuine_insights": "what they are correctly understanding about their own learning", "blind_spots": "metacognitive errors, overconfidence, or gaps they don't see", "follow_up_prompt": "a Socratic question that challenges their most significant blind spot", "metacognitive_quality": "surface|developing|deep"}`,
+        600);
+      t.remove();
+      STATE.learnerProfile.reflectionEngagement = Math.min(1, STATE.learnerProfile.reflectionEngagement + 0.12);
+      journal.push({framework, text, time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}), agentFeedback: result.blind_spots});
+      logEvent('reflection','reflection_saved',{framework});
+      body.innerHTML += `<div class="card">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+          <span style="font-size:11px;padding:3px 10px;border-radius:20px;border:0.5px solid var(--line2);color:var(--text2)">Metacognitive quality: ${result.metacognitive_quality}</span>
+        </div>
+        <div class="ai-label">Genuine insights</div>
+        <div class="ai-response" style="margin-bottom:10px">${result.genuine_insights}</div>
+        <div class="ai-label">Blind spots identified</div>
+        <div class="ai-response" style="margin-bottom:10px">${result.blind_spots}</div>
+        <div class="ai-label">Agent follow-up (Socratic challenge)</div>
+        <div style="font-style:italic;font-size:14px;color:var(--text);line-height:1.7;margin-bottom:10px;padding:12px 14px;border:0.5px solid var(--line2);border-radius:8px">"${result.follow_up_prompt}"</div>
+        <textarea id="ref-followup" placeholder="Your response to the follow-up…" style="min-height:80px"></textarea>
+        <div class="btn-row">
+          <button class="btn primary" onclick="submitRefFollowup()">Submit</button>
+          <button class="btn" onclick="renderReflect()">Next reflection →</button>
+        </div>
+      </div>`;
+      window.submitRefFollowup = async () => {
+        const ans = document.getElementById('ref-followup')?.value?.trim();
+        if (!ans) return;
+        const t2 = thinking(body, 'Agent reflecting on your response…');
+        const fb = await callClaude(SYS, `Follow-up prompt: "${result.follow_up_prompt}"\nResponse: "${ans}"\nGive a brief (2-3 sentence) reflective response that acknowledges what they saw and points to what remains to be examined.`, 300);
+        t2.remove();
+        body.innerHTML += `<div class="card"><div class="ai-label">Agent reflection</div><div class="ai-response">${fb}</div><div class="btn-row"><button class="btn primary" onclick="renderReflect()">Continue reflecting →</button></div></div>`;
+        window.renderReflect = renderReflect;
+      };
+    } catch(e) { t.remove(); body.innerHTML += apiError(); console.error(e); }
+  }
+
+  renderReflect();
+})();
+
+// ═══════════════════════════════════════════════════════
+// AGENT 7 — DIFFICULTY (autonomously decides escalation/reduction)
+// ═══════════════════════════════════════════════════════
+(function() {
+  const body = document.getElementById('dif-body');
+  const SYS = `You are the Difficulty Agent, implementing desirable difficulties theory (Bjork 1994) for MI education. You: (1) generate a question at the current difficulty level (1=Recall, 2=Application, 3=Analysis, 4=Expert synthesis); (2) read the learner's response; (3) autonomously decide whether to ESCALATE (they handled it well), HOLD (appropriate challenge, keep level), or REDUCE (they are struggling beyond productive difficulty); (4) generate the next question at the adjusted level. Target the 60-70% success zone — challenging enough to slow acquisition, easy enough to maintain engagement. Difficulty dimensions you control: cue availability, context complexity, ambiguity, response openness, time constraints in the question.`;
+  let currentLevel = 2;
+
+  async function generateDiffQuestion() {
+    const t = thinking(body, `Agent generating level ${currentLevel} question…`);
+    const levelLabels = {1:'Recall',2:'Application',3:'Analysis',4:'Expert synthesis'};
+    try {
+      const q = await callClaudeJSON(SYS,
+        `Generate an MI question at difficulty level ${currentLevel} (${levelLabels[currentLevel]}). Level 1=cued recall with scaffolding. Level 2=case application, no cues. Level 3=multi-step data interpretation. Level 4=synthesis with defense of reasoning under uncertainty. Return JSON: {"question": "the question", "level": ${currentLevel}, "difficulty_note": "what makes this question at this difficulty level"}`,
+        400);
+      t.remove();
+      body.innerHTML = `<div class="card">
+        <div class="sec">Difficulty agent · Level ${q.level} · ${levelLabels[q.level]}</div>
+        <div style="display:flex;gap:5px;margin-bottom:14px">
+          ${[1,2,3,4].map(l=>`<div style="flex:1;padding:6px 4px;border-radius:6px;font-size:10px;text-align:center;border:0.5px solid ${l===q.level?'var(--line3)':'var(--line)'};background:${l===q.level?'var(--bg3)':'transparent'};color:${l===q.level?'var(--text)':'var(--text3)'};">${levelLabels[l]}</div>`).join('')}
+        </div>
+        <div style="font-size:11px;color:var(--text3);margin-bottom:10px;font-style:italic">${q.difficulty_note}</div>
+        <div class="qtext">${q.question}</div>
+        <textarea id="dif-ans" placeholder="Answer at this difficulty level…" style="min-height:120px"></textarea>
+        <div class="btn-row"><button class="btn primary" onclick="submitDiffAnswer('${encodeURIComponent(q.question)}',${q.level})">Submit for agent assessment</button></div>
+      </div>
+      <div class="card">
+        <div class="sec">Difficulty principle</div>
+        <div style="font-size:12px;color:var(--text3);line-height:1.7">The agent reads your answer and autonomously decides whether to escalate, hold, or reduce difficulty. It targets the 60–70% success zone (Bjork 1994): challenging enough to slow acquisition for stronger encoding, easy enough to avoid frustration.</div>
+      </div>`;
+      window.submitDiffAnswer = submitDiff;
+    } catch(e) { t.remove(); body.innerHTML = apiError(); console.error(e); }
+  }
+
+  async function submitDiff(encodedQ, level) {
+    const q = decodeURIComponent(encodedQ);
+    const ans = document.getElementById('dif-ans')?.value?.trim();
+    if (!ans) return;
+    const t = thinking(body, 'Agent assessing difficulty fit and deciding next level…');
+    const levelLabels = {1:'Recall',2:'Application',3:'Analysis',4:'Expert synthesis'};
+    try {
+      const result = await callClaudeJSON(SYS,
+        `Question (Level ${level}): "${q}"\nLearner answer: "${ans}"\n\nAssess and return JSON: {"score": 0-100, "decision": "escalate|hold|reduce", "next_level": ${Math.min(4,Math.max(1,level))}, "reasoning": "why this decision based on their performance", "answer_feedback": "clinical feedback on their answer (2-3 sentences)", "next_level_preview": "what the next question type will look like"}`,
+        600);
+      t.remove();
+      currentLevel = result.next_level || level;
+      logEvent('difficulty','difficulty_submit',{level, score:result.score, decision:result.decision});
+      STATE.learnerProfile.difficultyLevel = currentLevel;
+      const decisionColor = result.decision==='escalate'?'#4caf7d':result.decision==='hold'?'#d4a853':'#5b9bd5';
+      body.innerHTML = `<div class="card">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+          <div style="font-family:var(--font-serif);font-size:28px;color:var(--text)">${result.score}<span style="font-size:14px;color:var(--text3)">/100</span></div>
+          <div style="flex:1"></div>
+          <span style="font-size:11px;padding:3px 10px;border-radius:20px;border:0.5px solid ${decisionColor}44;color:${decisionColor};font-weight:600;text-transform:uppercase;letter-spacing:.05em">${result.decision}</span>
+        </div>
+        <div class="ai-label">Agent decision</div>
+        <div class="ai-response" style="margin-bottom:10px">${result.reasoning}</div>
+        <div class="ai-label">Answer feedback</div>
+        <div class="ai-response" style="margin-bottom:10px">${result.answer_feedback}</div>
+        <div class="ai-label">Next: Level ${result.next_level} · ${levelLabels[result.next_level]||'Expert'}</div>
+        <div style="font-size:12px;color:var(--text3);margin-bottom:12px;font-style:italic">${result.next_level_preview}</div>
+        <div class="btn-row">
+          <button class="btn primary" onclick="generateDiffQ()">Continue at Level ${result.next_level} →</button>
+        </div>
+      </div>`;
+      window.generateDiffQ = generateDiffQuestion;
+    } catch(e) { t.remove(); body.innerHTML += apiError(); console.error(e); }
+  }
+
+  generateDiffQuestion();
+  window.generateDiffQuestion = generateDiffQuestion;
+})();
+
+// ═══════════════════════════════════════════════════════
+// UTILITIES
+// ═══════════════════════════════════════════════════════
+function apiError(retryFn) {
+  const retryId = 'retry_' + Math.random().toString(36).slice(2);
+  if (retryFn) window[retryId] = retryFn;
+  return `<div class="card" style="border-color:rgba(212,168,83,0.4)">
+    <div style="font-size:13px;font-weight:600;color:var(--gold);margin-bottom:6px">API key required</div>
+    <div style="font-size:12px;color:var(--text3);line-height:1.6;margin-bottom:12px">
+      Enter your Anthropic API key to activate the live agents. Your key is stored only in your browser and sent directly to api.anthropic.com — nowhere else.<br><br>
+      Get a free key at <a href="https://console.anthropic.com" target="_blank" style="color:var(--accent)">console.anthropic.com</a>
+    </div>
+    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+      <input id="apikey-input" type="password" placeholder="sk-ant-..."
+        style="flex:1;min-width:200px;padding:9px 12px;background:var(--bg);border:0.5px solid var(--line2);border-radius:8px;color:var(--text);font-family:var(--font-mono);font-size:12px;outline:none" />
+      <button class="btn primary" onclick="connectKey('${retryId}')">Connect &amp; retry</button>
+    </div>
+    ${getApiKey() ? '<div style="font-size:11px;color:var(--text3);margin-top:8px">Key found — this error may be a network issue. Try again.</div>' : ''}
+  </div>`;
+}
+
+function connectKey(retryId) {
+  const k = document.getElementById('apikey-input')?.value?.trim();
+  if (!k) return;
+  setApiKey(k);
+  if (window[retryId]) { window[retryId](); } else { location.reload(); }
+}
+
+// ═══════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════
+renderDashboard();
+renderRecommend();
+</script>
+
+<!-- ═══ API KEY PANEL ═══ -->
+<div id="key-panel" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:1000;align-items:center;justify-content:center;padding:20px">
+  <div style="background:var(--bg2);border:0.5px solid var(--line2);border-radius:16px;padding:28px 32px;max-width:480px;width:100%">
+    <div style="font-family:var(--font-serif);font-size:22px;color:var(--text);margin-bottom:6px">API Key Setup</div>
+    <div style="font-size:12px;color:var(--text3);line-height:1.7;margin-bottom:20px">
+      This system calls Claude claude-sonnet-4-20250514 directly from your browser.<br>
+      Your key is saved in <code style="font-family:var(--font-mono);font-size:11px;color:var(--accent)">localStorage</code> and sent only to <code style="font-family:var(--font-mono);font-size:11px;color:var(--accent)">api.anthropic.com</code>.<br><br>
+      Get a key at <a href="https://console.anthropic.com" target="_blank" style="color:var(--accent)">console.anthropic.com</a>
+    </div>
+    <input id="global-key-input" type="password" placeholder="sk-ant-api03-..."
+      style="width:100%;padding:10px 14px;background:var(--bg);border:0.5px solid var(--line2);border-radius:8px;color:var(--text);font-family:var(--font-mono);font-size:13px;outline:none;margin-bottom:12px" />
+    <div style="display:flex;gap:8px">
+      <button class="btn primary" style="flex:1;justify-content:center" onclick="saveGlobalKey()">Save &amp; activate agents</button>
+      <button class="btn" onclick="hideKeyPanel()">Cancel</button>
+    </div>
+    <div id="key-panel-msg" style="font-size:11px;color:var(--text3);margin-top:10px;display:none"></div>
+  </div>
+</div>
+<script>
+// ═══════════════════════════════════════════════════════
+// API KEY UI
+// ═══════════════════════════════════════════════════════
+function updateKeyStatus() {
+  const k = getApiKey();
+  const el = document.getElementById('key-status');
+  if (!el) return;
+  if (k) {
+    el.style.borderColor = 'rgba(76,175,125,0.4)';
+    el.style.color = '#4caf7d';
+    el.textContent = '✓ API key active';
+  } else {
+    el.style.borderColor = 'rgba(212,168,83,0.4)';
+    el.style.color = 'var(--gold)';
+    el.textContent = '⚠ No API key — tap to add';
+    el.style.cursor = 'pointer';
+    el.onclick = showKeyPanel;
+  }
+}
+
+function showKeyPanel() {
+  const panel = document.getElementById('key-panel');
+  panel.style.display = 'flex';
+  const inp = document.getElementById('global-key-input');
+  if (inp) { inp.value = getApiKey(); inp.focus(); }
+}
+
+function hideKeyPanel() {
+  document.getElementById('key-panel').style.display = 'none';
+}
+
+function saveGlobalKey() {
+  const k = document.getElementById('global-key-input')?.value?.trim();
+  const msg = document.getElementById('key-panel-msg');
+  if (!k || !k.startsWith('sk-')) {
+    msg.textContent = 'Key must start with sk-ant-... — check your Anthropic console.';
+    msg.style.color = 'var(--red)'; msg.style.display = 'block'; return;
+  }
+  setApiKey(k);
+  msg.textContent = 'Key saved. Agents are now live.';
+  msg.style.color = 'var(--green)'; msg.style.display = 'block';
+  updateKeyStatus();
+  setTimeout(hideKeyPanel, 1200);
+}
+
+// Show key panel on load only if opened as a file AND no key saved
+window.addEventListener('DOMContentLoaded', () => {
+  const isServed = window.location.protocol !== 'file:';
+  const keyStatus = document.getElementById('key-status');
+
+  if (isServed) {
+    // Running via server — proxy handles auth, no key needed from user
+    if (keyStatus) {
+      keyStatus.style.borderColor = 'rgba(76,175,125,0.4)';
+      keyStatus.style.color = '#4caf7d';
+      keyStatus.textContent = '✓ Connected via server';
+    }
+    // Hide key settings button — not needed
+    const keyBtn = keyStatus?.nextElementSibling;
+    if (keyBtn) keyBtn.style.display = 'none';
+  } else {
+    // Opened as a local file — need user's API key
+    updateKeyStatus();
+    if (!getApiKey()) {
+      setTimeout(showKeyPanel, 600);
+    }
+  }
+});
+</script>
+</body>
+</html>
