@@ -508,16 +508,22 @@ function initAgents() {
     { id:'difficulty',  prompt:'Check my recent performance and generate a question at the right difficulty level for the 60-70% success zone.' },
   ];
 
+  const idMap = {
+    retrieval:'ret', spacing:'sp', interleaving:'il',
+    generation:'gen', elaboration:'elab', reflection:'ref', difficulty:'dif'
+  };
+
   agents.forEach(a => {
-    const body = document.getElementById(a.id + '-body');
-    if (!body) { console.warn('Agent body not found:', a.id + '-body'); return; }
+    const bodyId = (idMap[a.id] || a.id) + '-body';
+    const body = document.getElementById(bodyId);
+    if (!body) { console.warn('Agent body not found:', bodyId); return; }
     body.innerHTML = `
       <div class="card" id="${a.id}-start">
         <div class="sec">Agent ready · ${LEARNER?.topic || 'Healthcare Education'}</div>
         <div style="font-size:13px;color:var(--text2);margin-bottom:14px">This agent will first read your learning history, then act. Each interaction is saved to your profile and updates your spaced repetition schedule.</div>
         <button class="btn primary" onclick="startAgent('${a.id}')">Activate ${a.id} agent →</button>
       </div>
-      <div id="${a.id}-chat"></div>`;
+      <div id="${idMap[a.id]||a.id}-chat"></div>`;
 
     window['startAgent_' + a.id + '_prompt'] = a.prompt;
   });
@@ -528,11 +534,18 @@ async function startAgent(agentId) {
   await sendToAgent(agentId, prompt, true);
 }
 
+const _idMap = {
+  retrieval:'ret', spacing:'sp', interleaving:'il',
+  generation:'gen', elaboration:'elab', reflection:'ref', difficulty:'dif'
+};
+
 async function sendToAgent(agentId, message, isFirst = false) {
-  const chat = document.getElementById(agentId + '-chat');
+  const shortId = _idMap[agentId] || agentId;
+  const chat = document.getElementById(shortId + '-chat');
   if (!chat) return;
   if (isFirst) {
-    document.getElementById(agentId + '-start').style.display = 'none';
+    const startEl = document.getElementById(shortId + '-start');
+    if (startEl) startEl.style.display = 'none';
   }
 
   // Show user message if not first system call
