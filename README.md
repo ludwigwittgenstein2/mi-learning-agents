@@ -1,122 +1,131 @@
-<<<<<<< HEAD
-# mi-learning-agents
-Applying Education Learning theory to AI Agents
-=======
-# MI Learning Agents — Agentic AI System
+# MI Learning Agents v2.0 — Full Agentic System
 
-Theory-grounded AI learning agents for healthcare education.
-7 agents, each backed by Claude claude-sonnet-4-20250514, implementing validated learning science mechanisms.
+Theory-grounded agentic AI for healthcare education.
+7 agents with real tool use, persistent learner profiles, spaced repetition email reminders, and research data export.
 
-Rejeleene & Mehta · Cleveland Clinic · 2026
+**Rejeleene & Mehta · Cleveland Clinic · 2026**
 
 ---
 
-## Quick Start (3 steps)
+## What makes this genuinely agentic
 
-### 1. Install dependencies
+Each agent runs a tool-use loop (not just text generation):
+
+1. **Calls `get_learner_history`** — reads your actual past answers and gaps
+2. **Calls `get_learner_stats`** — checks your overall performance
+3. **Reasons** about what to do based on real data
+4. **Generates** a personalized question or prompt
+5. **Receives** your answer
+6. **Calls `save_answer`** — records the interaction to the database
+7. **Calls `schedule_review`** — updates the SM-2 spaced repetition schedule
+8. **Calls `flag_weak_concept`** — marks gaps for priority review
+
+This is a perception → reasoning → action loop. Claude is not just generating text — it is reading state, deciding actions, and writing back to a database.
+
+---
+
+## Quick start
+
+### 1. Clone / unzip and install
 ```bash
 npm install
 ```
 
-### 2. Set your Anthropic API key
-Get your key at: https://console.anthropic.com
+### 2. Add PostgreSQL database on Railway
+Railway dashboard → your project → **+ New** → **Database** → **PostgreSQL**
+Railway automatically sets `DATABASE_URL`.
 
-**Mac / Linux:**
+### 3. Set environment variables on Railway
+Go to your project → **Variables** → add:
+
+| Variable | Value |
+|----------|-------|
+| `DATABASE_URL` | Set automatically by Railway PostgreSQL |
+| `ENCRYPTION_KEY` | Any random 32-character string |
+| `RESEND_API_KEY` | From resend.com (free, optional) |
+| `FROM_EMAIL` | Your verified sender email |
+| `BASE_URL` | Your Railway app URL |
+| `RESEARCH_PASSWORD` | Password for data export |
+
+### 4. Deploy
+Push to GitHub → Railway auto-deploys.
+
+Or run locally:
 ```bash
-export ANTHROPIC_API_KEY=sk-ant-your-key-here
-```
-
-**Windows (Command Prompt):**
-```cmd
-set ANTHROPIC_API_KEY=sk-ant-your-key-here
-```
-
-**Windows (PowerShell):**
-```powershell
-$env:ANTHROPIC_API_KEY="sk-ant-your-key-here"
-```
-
-### 3. Start the server
-```bash
+cp .env.example .env
+# Fill in .env values
 node server.js
 ```
 
-Then open **http://localhost:3000** in your browser.
+---
+
+## User flow
+
+1. Learner opens the app
+2. Enters name, email, and their own Anthropic API key
+3. Key is AES-256 encrypted and stored in PostgreSQL
+4. All 7 agents use their key — you pay nothing
+5. Spaced repetition schedule builds automatically
+6. Daily emails remind them when concepts are due
+7. All interactions logged for research export
 
 ---
 
-## Sharing with others on your network
+## Research data export
 
-Find your local IP address:
-- Mac/Linux: `ifconfig` or `ip addr`
-- Windows: `ipconfig`
-
-Others on the same Wi-Fi can open:
 ```
-http://YOUR_IP_ADDRESS:3000
+GET /api/research/export?password=your-research-password
 ```
 
-Example: `http://192.168.1.42:3000`
+Returns JSON with all learner interactions:
+- Agent used
+- Question asked
+- Learner answer
+- Score (0-100)
+- Gaps identified
+- Timestamp
+
+Export to CSV for your results section.
 
 ---
 
-## Deploying publicly (optional)
-
-To share with anyone on the internet, deploy to Railway, Render, or Fly.io:
-
-### Railway (easiest)
-1. Install Railway CLI: `npm install -g @railway/cli`
-2. `railway login`
-3. `railway init` (in this folder)
-4. Set environment variable in Railway dashboard: `ANTHROPIC_API_KEY=sk-ant-...`
-5. `railway up`
-
-### Render
-1. Push this folder to a GitHub repo
-2. Create a new Web Service on render.com
-3. Set `ANTHROPIC_API_KEY` in environment variables
-4. Build command: `npm install`
-5. Start command: `node server.js`
-
----
-
-## Project structure
+## Architecture
 
 ```
-mi-server/
-├── server.js          ← Express proxy server
-├── package.json       ← Dependencies
-├── README.md          ← This file
-└── public/
-    └── index.html     ← Full agentic frontend (all 7 agents)
+Learner → index.html
+    ↓ POST /api/learner (register/login)
+    ↓ POST /api/agent/:name (agent session)
+         ↓
+    server.js → agents.js (tool-use loop)
+         ↓              ↓
+    db.js          Anthropic API
+    (PostgreSQL)   (learner's key)
+         ↓
+    Daily cron → email.js → Resend SMTP
 ```
 
 ---
 
-## The 7 Agents
+## The 7 agents and their tools
 
-| Agent | Theory | What the AI does |
-|-------|--------|-----------------|
-| Retrieval | Testing Effect | Generates questions, semantically assesses free-text answers, targets gaps |
-| Spacing | Forgetting Curve / SM-2 | Reads recall quality, infers retention, sets next review interval |
-| Interleaving | Discrimination Learning | Generates mixed-domain questions, assesses domain identification |
-| Generation | Generation Effect | Reads your generation, compares to expert knowledge, identifies gaps |
-| Elaboration | Elaborative Interrogation | Reads elaboration depth, decides to go deeper / redirect / consolidate |
-| Reflection | Metacognition / Schön | Identifies blind spots and metacognitive errors in your reflection |
-| Difficulty | Desirable Difficulties / Bjork | Autonomously escalates, holds, or reduces challenge based on response |
+| Agent | Theory | Tools called |
+|-------|--------|-------------|
+| Retrieval | Testing Effect | get_learner_history, save_answer, flag_weak_concept, schedule_review |
+| Spacing | Forgetting Curve / SM-2 | get_due_concepts, schedule_review, save_answer |
+| Interleaving | Discrimination Learning | get_learner_history, save_answer, flag_weak_concept |
+| Generation | Generation Effect | get_learner_history, get_learner_stats, save_answer, flag_weak_concept, schedule_review |
+| Elaboration | Elaborative Interrogation | get_learner_history, save_answer, schedule_review |
+| Reflection | Metacognition / Schön | get_learner_stats, get_learner_history, save_answer, flag_weak_concept |
+| Difficulty | Desirable Difficulties / Bjork | get_learner_stats, get_learner_history, save_answer |
 
 ---
 
-## Architecture note (for the paper)
+## Cost estimate (Railway)
 
-What makes this genuinely agentic vs. a tool:
-
-- **Perception**: Each agent reads free-text learner responses semantically
-- **Reasoning**: Claude reasons about the quality, depth, and gaps in responses
-- **Action**: Agents generate new content, adjust parameters, decide next steps
-- **Memory**: Learner profile and concept mastery update across sessions
-- **Goal-directed**: Each agent pursues a specific pedagogical objective
-- **Orchestration**: The Recommend panel uses Claude to rank agents based on live learner state
-
-The proxy server keeps your API key secure — it never appears in the browser.
->>>>>>> 8dd8c01 (MI Learning Agents)
+| Component | Cost |
+|-----------|------|
+| Railway server | ~$0.50/month |
+| Railway PostgreSQL | Free (100MB) |
+| Resend email | Free (3000/month) |
+| Anthropic API | Paid by each user with their own key |
+| **Total to you** | **~$0.50/month** |
