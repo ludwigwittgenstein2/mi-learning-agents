@@ -449,24 +449,9 @@ function setApiKey(key) {
 }
 
 async function callClaude(systemPrompt, userMessage, maxTokens = 800) {
-  const key = getApiKey();
-  // Detect whether we are being served by the local proxy (localhost)
-  // or opened directly as a file. Route accordingly.
-  const isServed = window.location.protocol !== 'file:';
-  const url = isServed
-    ? '/api/claude'
-    : 'https://api.anthropic.com/v1/messages';
-
-  const headers = { 'Content-Type': 'application/json' };
-  // Only attach key for direct calls — proxy handles auth server-side
-  if (!isServed && key) {
-    headers['x-api-key'] = key;
-    headers['anthropic-version'] = '2023-06-01';
-  }
-
-  const res = await fetch(url, {
+  const res = await fetch('/api/claude', {
     method: 'POST',
-    headers,
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       model: 'claude-sonnet-4-20250514',
       max_tokens: maxTokens,
@@ -1321,17 +1306,11 @@ function apiError(retryFn) {
   const retryId = 'retry_' + Math.random().toString(36).slice(2);
   if (retryFn) window[retryId] = retryFn;
   return `<div class="card" style="border-color:rgba(212,168,83,0.4)">
-    <div style="font-size:13px;font-weight:600;color:var(--gold);margin-bottom:6px">API key required</div>
+    <div style="font-size:13px;font-weight:600;color:var(--gold);margin-bottom:6px">Agent error</div>
     <div style="font-size:12px;color:var(--text3);line-height:1.6;margin-bottom:12px">
-      Enter your Anthropic API key to activate the live agents. Your key is stored only in your browser and sent directly to api.anthropic.com — nowhere else.<br><br>
-      Get a free key at <a href="https://console.anthropic.com" target="_blank" style="color:var(--accent)">console.anthropic.com</a>
+      The agent could not reach the API. This may be a temporary network issue or rate limit.
     </div>
-    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
-      <input id="apikey-input" type="password" placeholder="sk-ant-..."
-        style="flex:1;min-width:200px;padding:9px 12px;background:var(--bg);border:0.5px solid var(--line2);border-radius:8px;color:var(--text);font-family:var(--font-mono);font-size:12px;outline:none" />
-      <button class="btn primary" onclick="connectKey('${retryId}')">Connect &amp; retry</button>
-    </div>
-    ${getApiKey() ? '<div style="font-size:11px;color:var(--text3);margin-top:8px">Key found — this error may be a network issue. Try again.</div>' : ''}
+    <button class="btn primary" onclick="${retryFn ? 'window[\''+ retryId +'\']();' : 'location.reload();'}">Try again</button>
   </div>`;
 }
 
@@ -1413,28 +1392,16 @@ function saveGlobalKey() {
   setTimeout(hideKeyPanel, 1200);
 }
 
-// Show key panel on load only if opened as a file AND no key saved
+// Always served via proxy — show connected status, never prompt for key
 window.addEventListener('DOMContentLoaded', () => {
-  const isServed = window.location.protocol !== 'file:';
   const keyStatus = document.getElementById('key-status');
-
-  if (isServed) {
-    // Running via server — proxy handles auth, no key needed from user
-    if (keyStatus) {
-      keyStatus.style.borderColor = 'rgba(76,175,125,0.4)';
-      keyStatus.style.color = '#4caf7d';
-      keyStatus.textContent = '✓ Connected via server';
-    }
-    // Hide key settings button — not needed
-    const keyBtn = keyStatus?.nextElementSibling;
-    if (keyBtn) keyBtn.style.display = 'none';
-  } else {
-    // Opened as a local file — need user's API key
-    updateKeyStatus();
-    if (!getApiKey()) {
-      setTimeout(showKeyPanel, 600);
-    }
+  if (keyStatus) {
+    keyStatus.style.borderColor = 'rgba(76,175,125,0.4)';
+    keyStatus.style.color = '#4caf7d';
+    keyStatus.textContent = '✓ Connected via server';
   }
+  const keyBtn = keyStatus?.nextElementSibling;
+  if (keyBtn) keyBtn.style.display = 'none';
 });
 </script>
 </body>
