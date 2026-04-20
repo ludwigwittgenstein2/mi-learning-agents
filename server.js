@@ -139,10 +139,12 @@ app.post('/api/agent/:agentName', async (req, res) => {
 
     console.log(`\nAgent: ${agentName} | Learner: ${learnerId} | Topic: ${agentTopic}`);
 
-    // Orchestrator: no tools, no session logging — just ranks agents
+    // Orchestrator: uses server API key (not learner's), no tools, no session logging
     if (agentName === 'orchestrator') {
       await db.endSession(sessionId, 0);
-      const result = await runAgent(apiKey, systemPrompt, message, context, []);
+      const serverKey = process.env.ANTHROPIC_API_KEY;
+      if (!serverKey) return res.status(500).json({ error: 'ANTHROPIC_API_KEY not set on server' });
+      const result = await runAgent(serverKey, systemPrompt, message, context, []);
       return res.json({ text: result.text, toolsUsed: 0 });
     }
 

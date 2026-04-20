@@ -308,9 +308,11 @@ async function initApp(learner, stats, dueCount) {
   document.getElementById('sb-learner').textContent = learner.name;
   document.getElementById('sb-topic').textContent = learner.topic;
 
+  // Wait for app to be visible before initializing agent panels
+  await new Promise(r => setTimeout(r, 50));
+  initAgents();
   renderDashboard();
   renderRecommend();
-  initAgents();
 }
 
 function logout() {
@@ -508,7 +510,7 @@ function initAgents() {
 
   agents.forEach(a => {
     const body = document.getElementById(a.id + '-body');
-    if (!body) return;
+    if (!body) { console.warn('Agent body not found:', a.id + '-body'); return; }
     body.innerHTML = `
       <div class="card" id="${a.id}-start">
         <div class="sec">Agent ready · ${LEARNER?.topic || 'Healthcare Education'}</div>
