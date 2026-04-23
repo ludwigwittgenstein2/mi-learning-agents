@@ -258,19 +258,9 @@
     </div>
 
     <div class="sidebar-footer">
-      <div id="sidebar-user" style="margin-bottom:8px;font-size:12px;color:var(--text2)"></div>
-      <div style="margin-bottom:6px">
-        <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Topic</div>
-        <div id="sidebar-topic" style="font-size:12px;color:var(--text);font-weight:500;margin-bottom:4px">Myocardial Infarction</div>
-        <div id="topic-edit-area" style="display:none">
-          <input id="topic-input" type="text" style="width:100%;padding:5px 8px;font-size:12px;border:0.5px solid var(--border2);border-radius:6px;background:var(--bg);color:var(--text);font-family:var(--font);margin-bottom:4px" placeholder="Enter topic..." />
-          <div style="display:flex;gap:4px">
-            <button class="btn xs primary" onclick="saveTopic()">Save</button>
-            <button class="btn xs" onclick="cancelTopicEdit()">Cancel</button>
-          </div>
-        </div>
-        <button class="btn xs" id="topic-change-btn" onclick="startTopicEdit()" style="font-size:10px;padding:2px 8px">Change topic</button>
-      </div>
+      <div id="sidebar-user" style="margin-bottom:6px;font-size:12px;color:var(--text2)"></div>
+      <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px">Topic</div>
+      <div id="sidebar-topic" style="font-size:12px;color:var(--text);font-weight:500;margin-bottom:8px;cursor:pointer" onclick="goTo('recommend')" title="Click to change topic">Myocardial Infarction ↗</div>
       Cleveland Clinic · AI in Education<br>
       Rejeleene &amp; Mehta, 2026
     </div>
@@ -483,8 +473,35 @@ function renderRecommend() {
   const recs = computeRecs();
   const top = recs[0];
   const urgencyBadge = u => `<span class="badge ${u==='high'?'red':u==='medium'?'amber':'blue'}">${u}</span>`;
+  const currentTopic = LEARNER?.topic || 'Myocardial Infarction';
+
+  const TOPICS = [
+    'Myocardial Infarction',
+    'Heart Failure',
+    'Atrial Fibrillation',
+    'Hypertensive Crisis',
+    'Pulmonary Embolism',
+    'Stroke & TIA',
+    'Sepsis & Septic Shock',
+    'Diabetic Ketoacidosis',
+    'Acute Kidney Injury',
+    'Community-Acquired Pneumonia',
+  ];
 
   el.innerHTML = `
+    <div class="card" style="margin-bottom:12px">
+      <div class="section-label">Orchestrator · Active topic</div>
+      <div style="font-size:16px;font-weight:600;color:var(--text);margin-bottom:12px" id="current-topic-display">${currentTopic}</div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:10px">Select a topic — all 4 agents switch immediately:</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px">
+        ${TOPICS.map(t => `<button onclick="applyTopic('${t}')" style="padding:5px 12px;border-radius:20px;font-size:12px;border:0.5px solid ${t===currentTopic?'var(--text)':'var(--border)'};background:${t===currentTopic?'var(--text)':'var(--bg)'};color:${t===currentTopic?'var(--bg)':'var(--text2)'};cursor:pointer;font-family:var(--font);transition:all .15s">${t}</button>`).join('')}
+      </div>
+      <div style="display:flex;gap:6px;align-items:center">
+        <input id="custom-topic-input" type="text" placeholder="Custom topic..." style="flex:1;padding:7px 12px;border:0.5px solid var(--border2);border-radius:var(--radius);background:var(--bg);color:var(--text);font-size:13px;font-family:var(--font)" />
+        <button class="btn primary" onclick="applyCustomTopic()">Apply</button>
+      </div>
+    </div>
+
     <div class="card accent" style="border-color:${top.color}">
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
         <div style="width:38px;height:38px;border-radius:50%;background:${top.color}20;border:0.5px solid ${top.color};display:flex;align-items:center;justify-content:center;flex-shrink:0">
@@ -519,6 +536,31 @@ function renderRecommend() {
       <div class="section-label">How recommendations are computed</div>
       <div class="stext">The orchestrator scores each agent across 4 signals: retrieval accuracy, spacing urgency (forgetting curve position), concept mastery gaps, and reflection engagement. Scores update in real time as you use agents.</div>
     </div>`;
+
+  document.getElementById('custom-topic-input')?.addEventListener('keydown', e => {
+    if (e.key === 'Enter') applyCustomTopic();
+  });
+}
+
+async function applyTopic(topic) {
+  if (!LEARNER) return;
+  LEARNER.topic = topic;
+  localStorage.setItem('mi_learner', JSON.stringify(LEARNER));
+  document.getElementById('sidebar-topic').textContent = topic;
+  try {
+    await fetch(`${API}/api/learner/${LEARNER.id}/topic`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ topic }),
+    });
+  } catch(e) { console.error('Topic update failed:', e); }
+  renderRecommend();
+  renderDashboard();
+}
+
+async function applyCustomTopic() {
+  const val = document.getElementById('custom-topic-input')?.value.trim();
+  if (val) await applyTopic(val);
 }
 
 // ═══════════════════════════════════════════════════════
@@ -1031,52 +1073,13 @@ function enterApp(learner) {
   const userEl = document.getElementById('sidebar-user');
   if (userEl) userEl.textContent = `👤 ${learner.name.split(' ')[0]}`;
   const topicEl = document.getElementById('sidebar-topic');
-  if (topicEl) topicEl.textContent = learner.topic || 'Myocardial Infarction';
-  // Update URL without reload
+  if (topicEl) topicEl.textContent = (learner.topic || 'Myocardial Infarction') + ' ↗';
   const url = new URL(window.location);
   url.searchParams.set('learner', learner.id);
   window.history.replaceState({}, '', url);
   renderDashboard();
   renderRecommend();
 }
-
-function startTopicEdit() {
-  const current = document.getElementById('sidebar-topic').textContent;
-  document.getElementById('topic-input').value = current;
-  document.getElementById('topic-edit-area').style.display = 'block';
-  document.getElementById('topic-change-btn').style.display = 'none';
-  document.getElementById('topic-input').focus();
-}
-
-function cancelTopicEdit() {
-  document.getElementById('topic-edit-area').style.display = 'none';
-  document.getElementById('topic-change-btn').style.display = 'inline-flex';
-}
-
-async function saveTopic() {
-  const newTopic = document.getElementById('topic-input').value.trim();
-  if (!newTopic || !LEARNER) return;
-  try {
-    await fetch(`${API}/api/learner/${LEARNER.id}/topic`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ topic: newTopic }),
-    });
-    LEARNER.topic = newTopic;
-    localStorage.setItem('mi_learner', JSON.stringify(LEARNER));
-    document.getElementById('sidebar-topic').textContent = newTopic;
-    cancelTopicEdit();
-    renderDashboard();
-    renderRecommend();
-  } catch (err) {
-    console.error('Topic update failed:', err);
-  }
-}
-
-document.getElementById('topic-input')?.addEventListener('keydown', e => {
-  if (e.key === 'Enter') saveTopic();
-  if (e.key === 'Escape') cancelTopicEdit();
-});
 
 function doLogout() {
   LEARNER = null;
