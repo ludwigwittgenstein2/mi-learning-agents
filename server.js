@@ -95,8 +95,30 @@ app.patch('/api/learner/:id/topic', async (req, res) => {
 // Login by email
 app.post('/api/learner/login', async (req, res) => {
   try {
-    const learner = await db.getLearnerByEmail(req.body.email);
-    if (!learner) return res.status(404).json({ error: 'No account found for this email' });
+    const { email, apiKey } = req.body;
+    if (!email) return res.status(400).json({ error: 'Email is required' });
+    if (!apiKey) return res.status(400).json({ error: 'Anthropic API key is required' });
+    if (!apiKey.startsWith('sk-ant-')) return res.status(400).json({ error: 'Invalid API key — must start with sk-ant-' });
+
+    const learner = await db.getLearnerByEmail(email);
+    if (!learner) return res.status(404).json({ error: 'No account found for this email — please register first' });
+
+    // Validate the key with a minimal API call
+    try {
+      const Anthropic = require('@anthropic-ai/sdk');
+      const client = new Anthropic({ apiKey });
+      await client.messages.create({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 10,
+        messages: [{ role: 'user', content: 'hi' }],
+      });
+    } catch (e) {
+      return res.status(400).json({ error: 'API key validation failed: ' + e.message });
+    }
+
+    // Update stored API key for this session
+    await db.pool.query('UPDATE learners SET api_key = $1 WHERE id = $2', [apiKey, learner.id]);
+
     const stats    = await db.getLearnerStats(learner.id);
     const concepts = await db.getConcepts(learner.id);
     const due      = concepts.filter(c => new Date(c.next_review) <= new Date());

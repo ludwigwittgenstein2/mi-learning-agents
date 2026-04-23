@@ -162,7 +162,23 @@
   .mastery-item { margin-bottom: 10px; }
   .mastery-label { display: flex; justify-content: space-between; margin-bottom: 3px; }
 
-  /* ── Scrollbar ── */
+  /* ── Login screen ── */
+  .login-screen { position: fixed; inset: 0; background: var(--bg3); display: flex; align-items: center; justify-content: center; z-index: 999; }
+  .login-box { background: var(--bg); border: 0.5px solid var(--border2); border-radius: var(--radius-lg); padding: 36px 40px; width: 100%; max-width: 400px; }
+  .login-title { font-size: 20px; font-weight: 600; color: var(--text); margin-bottom: 4px; letter-spacing: -0.02em; }
+  .login-sub { font-size: 13px; color: var(--text2); margin-bottom: 24px; line-height: 1.6; }
+  .login-input { width: 100%; padding: 10px 14px; border: 0.5px solid var(--border2); border-radius: var(--radius); background: var(--bg); color: var(--text); font-size: 13px; font-family: var(--font); margin-bottom: 10px; transition: border-color .15s; }
+  .login-input:focus { outline: none; border-color: var(--border3); }
+  .login-error { font-size: 12px; color: var(--red-text); background: var(--red-bg); border: 0.5px solid var(--red); border-radius: var(--radius); padding: 8px 12px; margin-bottom: 10px; display: none; }
+  .login-error.show { display: block; }
+  .login-tabs { display: flex; gap: 4px; margin-bottom: 20px; background: var(--bg2); border-radius: var(--radius); padding: 3px; }
+  .login-tab { flex: 1; padding: 7px; border-radius: 7px; text-align: center; font-size: 12px; font-weight: 500; cursor: pointer; color: var(--text2); transition: all .15s; border: none; background: transparent; font-family: var(--font); }
+  .login-tab.active { background: var(--bg); color: var(--text); box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+
+  /* ── Logout button ── */
+  .logout-btn { display: flex; align-items: center; gap: 7px; padding: 7px 14px; margin: 8px 10px 0; border-radius: var(--radius); font-size: 12px; color: var(--text3); cursor: pointer; border: 0.5px solid var(--border); background: transparent; font-family: var(--font); transition: all .15s; width: calc(100% - 20px); }
+  .logout-btn:hover { background: var(--red-bg); color: var(--red-text); border-color: var(--red); }
+
   ::-webkit-scrollbar { width: 5px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
@@ -170,7 +186,43 @@
 </head>
 <body>
 
-<div class="app-shell">
+<!-- ═══ LOGIN SCREEN ═══ -->
+<div class="login-screen" id="login-screen">
+  <div class="login-box">
+    <div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin-bottom:16px">MI Learning Agents · Cleveland Clinic</div>
+    <div class="login-title">Sign in to continue</div>
+    <div class="login-sub">Enter your details to access your personalised learning dashboard.</div>
+
+    <div class="login-tabs">
+      <button class="login-tab active" id="tab-login" onclick="switchLoginTab('login')">Sign in</button>
+      <button class="login-tab" id="tab-register" onclick="switchLoginTab('register')">Register</button>
+    </div>
+
+    <!-- Sign in form -->
+    <div id="form-login">
+      <input class="login-input" id="login-email" type="email" placeholder="Email address" />
+      <input class="login-input" id="login-apikey" type="password" placeholder="Anthropic API key (sk-ant-...)" />
+      <div class="login-error" id="login-error"></div>
+      <button class="btn primary" style="width:100%;justify-content:center;margin-top:4px" onclick="doLogin()">Sign in →</button>
+    </div>
+
+    <!-- Register form -->
+    <div id="form-register" style="display:none">
+      <input class="login-input" id="reg-name" type="text" placeholder="Full name" />
+      <input class="login-input" id="reg-email" type="email" placeholder="Email address" />
+      <input class="login-input" id="reg-apikey" type="password" placeholder="Anthropic API key (sk-ant-...)" />
+      <input class="login-input" id="reg-topic" type="text" placeholder="Topic (default: Myocardial Infarction)" />
+      <div class="login-error" id="reg-error"></div>
+      <button class="btn primary" style="width:100%;justify-content:center;margin-top:4px" onclick="doRegister()">Create account →</button>
+    </div>
+
+    <div style="margin-top:20px;font-size:11px;color:var(--text3);line-height:1.6">
+      Rejeleene &amp; Mehta · Cleveland Clinic · AI in Medical Education · 2026
+    </div>
+  </div>
+</div>
+
+<div class="app-shell" id="app-shell" style="display:none">
   <!-- ═══ SIDEBAR ═══ -->
   <nav class="sidebar">
     <div class="brand">
@@ -206,10 +258,12 @@
     </div>
 
     <div class="sidebar-footer">
+      <div id="sidebar-user" style="margin-bottom:8px;font-size:12px;color:var(--text2)"></div>
       Topic: Myocardial Infarction<br>
       Cleveland Clinic · AI in Education<br>
       Rejeleene &amp; Mehta, 2026
     </div>
+    <button class="logout-btn" onclick="doLogout()">⎋ Sign out</button>
   </nav>
 
   <!-- ═══ MAIN CONTENT ═══ -->
@@ -265,7 +319,7 @@
     </div>
 
   </main>
-</div>
+</div> <!-- end app-shell -->
 
 <script>
 // ═══════════════════════════════════════════════════════
@@ -877,10 +931,161 @@ function renderRecommend() {
 })();
 
 // ═══════════════════════════════════════════════════════
-// INIT
+// AUTH — LOGIN / REGISTER / LOGOUT
 // ═══════════════════════════════════════════════════════
-renderDashboard();
-renderRecommend();
+const API = window.location.origin;
+let LEARNER = null;
+
+function switchLoginTab(tab) {
+  document.getElementById('form-login').style.display = tab === 'login' ? 'block' : 'none';
+  document.getElementById('form-register').style.display = tab === 'register' ? 'block' : 'none';
+  document.getElementById('tab-login').classList.toggle('active', tab === 'login');
+  document.getElementById('tab-register').classList.toggle('active', tab === 'register');
+  document.getElementById('login-error').classList.remove('show');
+  document.getElementById('reg-error').classList.remove('show');
+}
+
+async function doLogin() {
+  const email  = document.getElementById('login-email').value.trim();
+  const apiKey = document.getElementById('login-apikey').value.trim();
+  const errEl  = document.getElementById('login-error');
+  errEl.classList.remove('show');
+
+  if (!email) { errEl.textContent = 'Please enter your email address.'; errEl.classList.add('show'); return; }
+  if (!apiKey) { errEl.textContent = 'Please enter your Anthropic API key.'; errEl.classList.add('show'); return; }
+  if (!apiKey.startsWith('sk-ant-')) { errEl.textContent = 'API key must start with sk-ant-'; errEl.classList.add('show'); return; }
+
+  const btn = document.querySelector('#form-login .btn');
+  btn.textContent = 'Signing in…'; btn.disabled = true;
+
+  try {
+    const res = await fetch(`${API}/api/learner/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, apiKey }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Sign in failed');
+    enterApp(data.learner);
+  } catch (err) {
+    errEl.textContent = err.message;
+    errEl.classList.add('show');
+  } finally {
+    btn.textContent = 'Sign in →'; btn.disabled = false;
+  }
+}
+
+async function doRegister() {
+  const name   = document.getElementById('reg-name').value.trim();
+  const email  = document.getElementById('reg-email').value.trim();
+  const apiKey = document.getElementById('reg-apikey').value.trim();
+  const topic  = document.getElementById('reg-topic').value.trim() || 'Myocardial Infarction';
+  const errEl  = document.getElementById('reg-error');
+  errEl.classList.remove('show');
+
+  if (!name || !email || !apiKey) {
+    errEl.textContent = 'Name, email, and API key are required.';
+    errEl.classList.add('show'); return;
+  }
+  if (!apiKey.startsWith('sk-ant-')) {
+    errEl.textContent = 'API key must start with sk-ant-';
+    errEl.classList.add('show'); return;
+  }
+
+  const btn = document.querySelector('#form-register .btn');
+  btn.textContent = 'Creating account…'; btn.disabled = true;
+
+  try {
+    const res = await fetch(`${API}/api/learner`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email, apiKey, topic }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Registration failed');
+    enterApp(data.learner);
+  } catch (err) {
+    errEl.textContent = err.message;
+    errEl.classList.add('show');
+  } finally {
+    btn.textContent = 'Create account →'; btn.disabled = false;
+  }
+}
+
+function enterApp(learner) {
+  LEARNER = learner;
+  localStorage.setItem('mi_learner', JSON.stringify(learner));
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app-shell').style.display = 'flex';
+  const userEl = document.getElementById('sidebar-user');
+  if (userEl) userEl.textContent = `👤 ${learner.name.split(' ')[0]}`;
+  // Update URL without reload
+  const url = new URL(window.location);
+  url.searchParams.set('learner', learner.id);
+  window.history.replaceState({}, '', url);
+  renderDashboard();
+  renderRecommend();
+}
+
+function doLogout() {
+  LEARNER = null;
+  localStorage.removeItem('mi_learner');
+  // Clear URL param
+  const url = new URL(window.location);
+  url.searchParams.delete('learner');
+  window.history.replaceState({}, '', url);
+  document.getElementById('app-shell').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+  // Reset forms
+  document.getElementById('login-email').value = '';
+  document.getElementById('login-error').classList.remove('show');
+  switchLoginTab('login');
+}
+
+// Allow Enter key on login fields
+document.getElementById('login-email').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+document.getElementById('login-apikey').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+document.getElementById('reg-apikey').addEventListener('keydown', e => { if (e.key === 'Enter') doRegister(); });
+
+// ── Auto-login: check localStorage or URL param ──────────
+(function() {
+  // Check URL param first
+  const urlParams = new URLSearchParams(window.location.search);
+  const urlLearnerId = urlParams.get('learner');
+
+  // Then check localStorage
+  const stored = localStorage.getItem('mi_learner');
+  if (stored) {
+    try {
+      const learner = JSON.parse(stored);
+      // If URL has a different learner ID, fetch fresh data
+      if (urlLearnerId && urlLearnerId != learner.id) {
+        fetch(`${API}/api/learner/${urlLearnerId}`)
+          .then(r => r.json())
+          .then(data => { if (data.learner) enterApp(data.learner); else enterApp(learner); })
+          .catch(() => enterApp(learner));
+      } else {
+        enterApp(learner);
+      }
+      return;
+    } catch(e) { localStorage.removeItem('mi_learner'); }
+  }
+
+  // If URL has learner param, fetch and auto-login
+  if (urlLearnerId) {
+    fetch(`${API}/api/learner/${urlLearnerId}`)
+      .then(r => r.json())
+      .then(data => { if (data.learner) enterApp(data.learner); })
+      .catch(() => {});
+    return;
+  }
+
+  // No session — show login screen (already visible by default)
+})();
+
+// ═══════════════════════════════════════════════════════
+// INIT — rendering happens inside enterApp() after login
+// ═══════════════════════════════════════════════════════
 </script>
 </body>
 </html>
