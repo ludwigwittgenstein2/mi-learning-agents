@@ -200,6 +200,11 @@
       <div class="nav-dot" style="background:#534AB7"></div>4 · Reflection
     </div>
 
+    <div class="nav-section-label">Help</div>
+    <div class="nav-item" data-panel="guide">
+      <div class="nav-dot" style="background:#888"></div>Guide
+    </div>
+
     <div class="sidebar-footer">
       Topic: Myocardial Infarction<br>
       Cleveland Clinic · AI in Education<br>
@@ -250,6 +255,13 @@
       <div class="page-title">Reflection Agent</div>
       <div class="page-sub">Metacognitive Reflection · Schön 1983 — structured post-session review deepens understanding</div>
       <div id="ref-body"></div>
+    </div>
+
+    <!-- ── GUIDE ── -->
+    <div class="panel" id="panel-guide">
+      <div class="page-title">How to Use This App</div>
+      <div class="page-sub">MI Learning Agents · Instructions for learners and researchers</div>
+      <div id="guide-body"></div>
     </div>
 
   </main>
@@ -726,6 +738,142 @@ function renderRecommend() {
   }
 
   renderReflect();
+})();
+
+// ═══════════════════════════════════════════════════════
+// GUIDE
+// ═══════════════════════════════════════════════════════
+(function() {
+  const body = document.getElementById('guide-body');
+  let activeTab = 'learner';
+
+  const content = {
+    learner: [
+      {
+        icon: '①',
+        title: 'Getting started',
+        color: '#185FA5',
+        steps: [
+          { label: 'Open the app', text: 'Navigate to your app URL. Your learning dashboard loads immediately — no login required for the demo.' },
+          { label: 'Check the Dashboard', text: 'The Dashboard shows your concept mastery bars, agent activity, and session log. Start here every time to see where you stand.' },
+          { label: 'Follow Recommendations', text: 'Click Recommend in the sidebar. The orchestrator ranks all 4 agents by your current learning need — start with the top-ranked agent each session.' },
+        ]
+      },
+      {
+        icon: '②',
+        title: 'The 4 agents — what each one does',
+        color: '#0F6E56',
+        steps: [
+          { label: '1 · Retrieval', text: 'Multiple-choice questions on MI topics. Answer without notes. After each question you see the correct answer and a clinical explanation. Wrong answers are flagged for spaced review.' },
+          { label: '2 · Spacing', text: 'Shows concepts due for review based on the SM-2 forgetting curve. Write everything you recall, then rate your recall quality (Forgot / Partial / Good / Perfect). Your rating sets the next review interval — better recall = longer gap.' },
+          { label: '3 · Interleaving', text: 'Questions from 4 domains (Pathophysiology, Pharmacology, ECG interpretation, Clinical management) mixed in random order. Identify the domain before answering. This builds discrimination — knowing which type of problem you are facing.' },
+          { label: '4 · Reflection', text: 'Choose a reflection framework (Calibration, Error analysis, Connection, Transfer, Goals). Write a primary reflection, then answer a Socratic follow-up. Entries are saved to your reflection journal.' },
+        ]
+      },
+      {
+        icon: '③',
+        title: 'Daily email reports',
+        color: '#534AB7',
+        steps: [
+          { label: 'What you receive', text: 'Every morning at 8:00 AM ET you receive a learning report showing: your 24-hour accuracy, questions you got wrong, weak concepts to focus on, and concepts due for spaced review.' },
+          { label: 'Retake missed questions', text: 'The email contains a red "Retake missed questions →" button that links directly to the Retrieval agent. Click it to practice the concepts you got wrong.' },
+          { label: 'Spacing review link', text: 'A gold "Start spacing review →" button links directly to the Spacing agent showing only overdue concepts.' },
+          { label: 'Check spam', text: 'During testing, emails may arrive in spam. Mark as "Not spam" once to ensure future reports land in your inbox.' },
+        ]
+      },
+      {
+        icon: '④',
+        title: 'Tips for effective use',
+        color: '#854F0B',
+        steps: [
+          { label: 'Use it daily', text: 'Even 10 minutes per day produces better retention than a single long session. The spacing agent is calibrated for daily use.' },
+          { label: 'Do not look up answers', text: 'The testing effect only works if you attempt recall before seeing the answer. Struggling is the learning — resist the urge to check your notes first.' },
+          { label: 'Rate spacing honestly', text: 'In the Spacing agent, rate your recall accurately. Overrating (choosing "Perfect" when you were unsure) extends the interval too far and you will forget before the next review.' },
+          { label: 'Follow the Recommend tab', text: 'The orchestrator computes which agent you need most based on your actual performance data. Trust it over personal preference.' },
+        ]
+      },
+    ],
+    researcher: [
+      {
+        icon: '①',
+        title: 'System architecture',
+        color: '#185FA5',
+        steps: [
+          { label: 'Backend', text: 'Node.js / Express server hosted on Railway. PostgreSQL database for learner profiles, answer history, and concept scheduling. All agent interactions are logged with timestamps, agent name, score, and knowledge gaps.' },
+          { label: 'AI agents', text: 'Each agent calls the Anthropic Claude API (claude-sonnet-4) with a theory-specific system prompt and a 6-step agentic tool-use loop: get_learner_history → generate question → assess answer → save_answer → flag_weak_concept → schedule_review.' },
+          { label: 'Spaced repetition', text: 'SM-2 algorithm (Wozniak 1987). Recall scored 0–3. Interval doubles on "Perfect", halves on "Forgot". Retention estimated via exponential decay: R = e^(−t/S) where S = stability.' },
+          { label: 'Email', text: 'Resend HTTP API. Daily cron job at 8:00 AM ET queries all active learners, fetches last-24h answers and due concepts, and sends personalized reports.' },
+        ]
+      },
+      {
+        icon: '②',
+        title: 'Registering learners',
+        color: '#0F6E56',
+        steps: [
+          { label: 'API endpoint', text: 'POST /api/learner with JSON body: { email, name, apiKey, topic }. Returns learner ID. Each learner provides their own Anthropic API key — usage is billed to their account.' },
+          { label: 'Topic customization', text: 'The topic field sets the clinical focus for all 4 agents. Default is "Myocardial Infarction". Any acute care topic works — agents adapt their questions and assessments to the specified topic.' },
+          { label: 'Learner profile', text: 'GET /api/learner/:id returns full profile, stats, concept schedule, and due count. Use this to monitor individual learner progress.' },
+          { label: 'Login by email', text: 'POST /api/learner/login with { email } returns the learner profile without requiring a password — suitable for low-friction study enrollment.' },
+        ]
+      },
+      {
+        icon: '③',
+        title: 'Research data export',
+        color: '#534AB7',
+        steps: [
+          { label: 'Export endpoint', text: 'GET /api/research/export?password=research2026 returns all answer records across all learners as JSON. Change the password via the RESEARCH_PASSWORD environment variable on Railway.' },
+          { label: 'Data structure', text: 'Each record contains: learner_id, agent, topic, question, answer, score (0–100), correct (boolean), gaps (array of knowledge gaps), feedback, and created_at timestamp.' },
+          { label: 'Metrics available', text: 'Per-learner: total sessions, accuracy by agent, average score, concept mastery trajectory, spacing compliance, reflection engagement. Aggregate: cross-learner accuracy by concept, agent utilization rates.' },
+          { label: 'IRB considerations', text: 'Learners register with email and name. API keys are stored encrypted. No PHI is collected. All question content is de-identified clinical vignettes. Consult your IRB for human subjects requirements.' },
+        ]
+      },
+      {
+        icon: '④',
+        title: 'Theoretical grounding',
+        color: '#854F0B',
+        steps: [
+          { label: 'Testing Effect', text: 'Roediger & Karpicke (2006): retrieval practice produces greater long-term retention than repeated study. Implemented via the Retrieval agent — MCQ format with immediate corrective feedback.' },
+          { label: 'Spacing Effect', text: 'Ebbinghaus (1885), SM-2 algorithm (Wozniak 1987): distributed practice at expanding intervals produces durable memory. Implemented via the Spacing agent with recall-quality-based interval adjustment.' },
+          { label: 'Interleaving', text: 'Kornell & Bjork (2008): mixing problem types during practice improves discrimination and transfer. Implemented via random domain ordering across Pathophysiology, Pharmacology, ECG, and Clinical management.' },
+          { label: 'Metacognitive Reflection', text: 'Schön (1983), Flavell (1979): structured reflection on performance errors produces calibrated self-assessment. Implemented via 5 reflection frameworks grounded in Dunning-Kruger, depth-of-processing, and self-regulated learning theory.' },
+        ]
+      },
+    ]
+  };
+
+  function renderGuide() {
+    const tab = content[activeTab];
+    body.innerHTML = `
+      <div style="display:flex;gap:6px;margin-bottom:20px">
+        <button class="btn${activeTab==='learner'?' primary':''}" onclick="switchGuideTab('learner')">For Learners</button>
+        <button class="btn${activeTab==='researcher'?' primary':''}" onclick="switchGuideTab('researcher')">For Researchers</button>
+      </div>
+
+      ${tab.map(section => `
+        <div class="card" style="margin-bottom:12px">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+            <div style="width:28px;height:28px;border-radius:50%;background:${section.color}18;border:0.5px solid ${section.color};display:flex;align-items:center;justify-content:center;font-size:13px;color:${section.color};font-weight:600;flex-shrink:0">${section.icon}</div>
+            <div style="font-size:15px;font-weight:600;color:var(--text)">${section.title}</div>
+          </div>
+          ${section.steps.map((step, i) => `
+            <div style="display:flex;gap:12px;padding:10px 0;${i < section.steps.length-1 ? 'border-bottom:0.5px solid var(--border)' : ''}">
+              <div style="width:3px;border-radius:2px;background:${section.color};flex-shrink:0;margin:2px 0"></div>
+              <div>
+                <div style="font-size:13px;font-weight:500;color:var(--text);margin-bottom:3px">${step.label}</div>
+                <div style="font-size:12px;color:var(--text2);line-height:1.65">${step.text}</div>
+              </div>
+            </div>`).join('')}
+        </div>`).join('')}
+
+      <div class="card">
+        <div class="section-label">Questions or issues</div>
+        <div class="stext">Contact: Rejeleene &amp; Mehta · Cleveland Clinic · AI in Medical Education Research · 2026</div>
+      </div>`;
+
+    window.switchGuideTab = tab => { activeTab = tab; renderGuide(); };
+  }
+
+  renderGuide();
 })();
 
 // ═══════════════════════════════════════════════════════

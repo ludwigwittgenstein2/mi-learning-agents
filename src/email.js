@@ -144,6 +144,21 @@ async function sendDailyReport(learner, { dueConcepts, recentAnswers, stats, lea
         </a>` : ''}
     </div>
 
+    <!-- Quick instructions reminder -->
+    <div style="background:#1a1a1a;border-radius:8px;padding:14px 16px;margin-bottom:20px;border:0.5px solid rgba(255,255,255,0.06)">
+      <div style="font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:#5a5652;margin-bottom:10px">Quick guide</div>
+      ${[
+        ['Retrieval', '#185FA5', 'Answer MCQs without notes. Wrong answers are flagged for spacing review.'],
+        ['Spacing', '#0F6E56', 'Write your recall, then rate it honestly — your rating sets the next review date.'],
+        ['Interleaving', '#854F0B', 'Identify the domain before answering. Random order builds clinical discrimination.'],
+        ['Reflection', '#534AB7', 'Choose a framework, reflect on your errors, answer the Socratic follow-up.'],
+      ].map(([agent, col, tip]) => `
+        <div style="display:flex;gap:10px;padding:6px 0;border-bottom:0.5px solid rgba(255,255,255,0.04)">
+          <div style="width:7px;height:7px;border-radius:50%;background:${col};flex-shrink:0;margin-top:4px"></div>
+          <div><span style="font-size:11px;font-weight:600;color:#c0bcb8">${agent}</span> <span style="font-size:11px;color:#5a5652">· ${tip}</span></div>
+        </div>`).join('')}
+    </div>
+
     <div style="padding-top:20px;border-top:0.5px solid rgba(255,255,255,0.07);font-size:11px;color:#5a5652;line-height:1.7">
       MI Learning Agents · Rejeleene &amp; Mehta · Cleveland Clinic 2026<br>
       Spaced repetition · Testing effect · Metacognitive reflection
@@ -197,8 +212,26 @@ async function sendWelcomeEmail(learner) {
       ].map(([a,t]) => `<div style="padding:5px 0;border-bottom:0.5px solid rgba(255,255,255,0.06);font-size:12px;color:#e0ddd8">${a} <span style="color:#5a5652">· ${t}</span></div>`).join('')}
     </div>
 
-    <div style="font-size:13px;color:#9a9690;line-height:1.7;margin-bottom:24px">
-      Each morning you will receive a daily report showing your accuracy, questions you got wrong, weak concepts to focus on, and concepts due for spaced repetition review.
+    <!-- How to use -->
+    <div style="background:#1e1e1e;border-radius:8px;padding:16px 18px;margin-bottom:24px">
+      <div style="font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:#5a5652;margin-bottom:14px">How to use</div>
+
+      ${[
+        ['1', '#185FA5', 'Start on the Dashboard', 'Check your concept mastery bars and session log each time you open the app.'],
+        ['2', '#185FA5', 'Follow Recommendations', 'The Recommend tab ranks all 4 agents by your current learning need — start with the top agent each session.'],
+        ['3', '#0F6E56', 'Retrieval agent', 'Answer multiple-choice questions without notes. Struggling before seeing the answer is the learning — do not skip ahead.'],
+        ['4', '#0F6E56', 'Spacing agent', 'Write everything you recall, then rate your recall quality honestly. Your rating sets the next review interval.'],
+        ['5', '#854F0B', 'Interleaving agent', 'Questions come from 4 domains in random order. Try to identify the domain before answering — this builds clinical discrimination.'],
+        ['6', '#534AB7', 'Reflection agent', 'Choose a framework, write a reflection, and answer the Socratic follow-up. Entries are saved to your journal.'],
+        ['7', '#c9b99a', 'Daily email at 8 AM ET', 'Every morning you receive a report with your accuracy, questions you got wrong, weak concepts, and concepts due for review. Click the buttons in the email to go directly to the right agent.'],
+      ].map(([n, col, title, text]) => `
+        <div style="display:flex;gap:12px;padding:9px 0;border-bottom:0.5px solid rgba(255,255,255,0.06)">
+          <div style="width:20px;height:20px;border-radius:50%;background:${col}22;border:0.5px solid ${col};display:flex;align-items:center;justify-content:center;font-size:10px;color:${col};font-weight:700;flex-shrink:0;margin-top:1px">${n}</div>
+          <div>
+            <div style="font-size:12px;font-weight:600;color:#e0ddd8;margin-bottom:2px">${title}</div>
+            <div style="font-size:11px;color:#9a9690;line-height:1.6">${text}</div>
+          </div>
+        </div>`).join('')}
     </div>
 
     <a href="${appUrl}"
