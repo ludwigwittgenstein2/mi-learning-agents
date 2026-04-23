@@ -4,7 +4,7 @@ const cors       = require('cors');
 const path       = require('path');
 const cron       = require('node-cron');
 const db         = require('./src/db');
-const { sendSpacingReminder, sendWelcomeEmail } = require('./src/email');
+const { sendSpacingReminder, sendWelcomeEmail, sendDailyReport } = require('./src/email');
 const { runAgent, getSystemPrompt } = require('./src/agents');
 
 const app  = express();
@@ -226,14 +226,40 @@ app.get('/', (req, res) => {
 // Runs every day at 8:00 AM ET
 // ════════════════════════════════════════════════════════
 cron.schedule('0 8 * * *', async () => {
-  console.log('\n[Scheduler] Running daily spacing reminder check…');
+  console.log('\n[Scheduler] Running daily report…');
   try {
-    const learners = await db.getLearnersWithDueReviews();
-    console.log(`[Scheduler] Found ${learners.length} learner(s) with due reviews`);
+    // Get all active learners (not just those with due reviews)
+    const result = await db.pool.query(`
+      SELECT l.*, array_agg(c.name) FILTER (WHERE c.next_review <= NOW()) as due_concepts
+      FROM learners l
+      LEFT JOIN concepts c ON c.learner_id = l.id
+      WHERE l.last_active > NOW() - INTERVAL '30 days'
+      GROUP BY l.id
+    `);
+    const learners = result.rows;
+    console.log(`[Scheduler] Sending reports to ${learners.length} learner(s)`);
+
     for (const learner of learners) {
-      const dueConcepts = learner.due_concepts.filter(Boolean);
-      if (dueConcepts.length > 0) {
-        await sendSpacingReminder(learner, dueConcepts, learner.id);
+      try {
+        const dueConcepts = (learner.due_concepts || []).filter(Boolean);
+        // Get last 24h of answers
+        const histResult = await db.pool.query(`
+          SELECT question, correct, gaps, score, agent
+          FROM answers
+          WHERE learner_id = $1 AND created_at > NOW() - INTERVAL '24 hours'
+          ORDER BY created_at DESC
+        `, [learner.id]);
+        const recentAnswers = histResult.rows;
+        const stats = await db.getLearnerStats(learner.id);
+
+        await sendDailyReport(learner, {
+          dueConcepts,
+          recentAnswers,
+          stats,
+          learnerId: learner.id,
+        });
+      } catch (err) {
+        console.error(`[Scheduler] Failed for ${learner.email}:`, err.message);
       }
     }
   } catch (err) {
