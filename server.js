@@ -112,11 +112,18 @@ app.post('/api/learner/login', async (req, res) => {
 
 // ════════════════════════════════════════════════════════
 // AGENT ROUTES — true agentic loop with tool use
+// Valid agent names: retrieval, spacing, interleaving, reflection, orchestrator
 // ════════════════════════════════════════════════════════
+const VALID_AGENTS = new Set(['retrieval', 'spacing', 'interleaving', 'reflection', 'orchestrator']);
+
 app.post('/api/agent/:agentName', async (req, res) => {
   try {
     const { agentName } = req.params;
     const { learnerId, message, topic } = req.body;
+
+    if (!VALID_AGENTS.has(agentName)) {
+      return res.status(400).json({ error: `Unknown agent: ${agentName}. Valid agents: ${[...VALID_AGENTS].join(', ')}` });
+    }
 
     if (!learnerId || !message) {
       return res.status(400).json({ error: 'learnerId and message are required' });
@@ -139,7 +146,7 @@ app.post('/api/agent/:agentName', async (req, res) => {
 
     console.log(`\nAgent: ${agentName} | Learner: ${learnerId} | Topic: ${agentTopic}`);
 
-    // Orchestrator: uses server API key (not learner's), no tools, no session logging
+    // Orchestrator: uses server API key, no tools, no session logging
     if (agentName === 'orchestrator') {
       await db.endSession(sessionId, 0);
       const serverKey = process.env.ANTHROPIC_API_KEY;
@@ -216,7 +223,7 @@ app.get('/', (req, res) => {
 
 // ════════════════════════════════════════════════════════
 // DAILY SCHEDULER — spaced repetition reminders
-// Runs every day at 8:00 AM
+// Runs every day at 8:00 AM ET
 // ════════════════════════════════════════════════════════
 cron.schedule('0 8 * * *', async () => {
   console.log('\n[Scheduler] Running daily spacing reminder check…');
@@ -251,8 +258,10 @@ async function start() {
   app.listen(PORT, () => {
     console.log(`
 ╔══════════════════════════════════════════════════╗
-║   MI Learning Agents — Full Agentic System       ║
+║   MI Learning Agents — 4-Agent System            ║
 ╠══════════════════════════════════════════════════╣
+║  Agents:     Retrieval, Spacing,                 ║
+║              Interleaving, Reflection            ║
 ║  URL:        http://localhost:${PORT}               ║
 ║  DB:         ${process.env.DATABASE_URL ? '✓ Connected' : '✗ No DATABASE_URL set    '}              ║
 ║  Email:      ${process.env.RESEND_API_KEY ? '✓ Resend configured' : '✗ No RESEND_API_KEY (optional)'}       ║

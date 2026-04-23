@@ -3,623 +3,736 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>MI Learning Agents</title>
+<title>MI Learning Agents — Theory-Grounded Healthcare Education</title>
 <style>
-@import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Mono:wght@400;500&family=Instrument+Sans:wght@400;500;600&display=swap');
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-:root{
-  --bg:#0f0f0f;--bg2:#161616;--bg3:#1e1e1e;--bg4:#252525;
-  --line:rgba(255,255,255,0.07);--line2:rgba(255,255,255,0.13);--line3:rgba(255,255,255,0.22);
-  --text:#f0ede8;--text2:#9a9690;--text3:#5a5652;
-  --accent:#c9b99a;--gold:#d4a853;--green:#4caf7d;--red:#e05252;--blue:#5b9bd5;
-  --font-serif:'DM Serif Display',Georgia,serif;
-  --font-sans:'Instrument Sans',system-ui,sans-serif;
-  --font-mono:'DM Mono',monospace;
-}
-html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font-sans);font-size:14px;line-height:1.6}
-.shell{display:flex;height:100vh;overflow:hidden}
-.sidebar{width:240px;flex-shrink:0;background:var(--bg2);border-right:0.5px solid var(--line2);display:flex;flex-direction:column;overflow-y:auto}
-.brand{padding:22px 20px 18px;border-bottom:0.5px solid var(--line)}
-.brand-title{font-family:var(--font-serif);font-size:17px;color:var(--text);line-height:1.2;margin-bottom:4px}
-.brand-sub{font-size:11px;color:var(--text3)}
-.nav-sec{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);padding:16px 20px 6px}
-.nav-item{display:flex;align-items:center;gap:10px;padding:9px 20px;font-size:12px;color:var(--text2);cursor:pointer;transition:all .15s;border-left:2px solid transparent;user-select:none}
-.nav-item:hover{background:var(--bg3);color:var(--text)}
-.nav-item.active{color:var(--text);background:var(--bg3);border-left-color:var(--accent)}
-.nav-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
-.sidebar-foot{margin-top:auto;padding:16px 20px;border-top:0.5px solid var(--line);font-size:10px;color:var(--text3);line-height:1.7}
-.main{flex:1;overflow-y:auto;padding:36px 40px}
-.panel{display:none;max-width:740px}.panel.active{display:block}
-.page-title{font-family:var(--font-serif);font-size:28px;color:var(--text);letter-spacing:-.02em;line-height:1.15;margin-bottom:6px}
-.page-sub{font-size:12px;color:var(--text3);margin-bottom:22px}
-.card{background:var(--bg2);border:0.5px solid var(--line2);border-radius:12px;padding:20px 22px;margin-bottom:12px}
-.card.glow{border-color:var(--accent)}
-.sec{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:8px}
-.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 18px;border-radius:8px;font-size:12px;font-weight:500;font-family:var(--font-sans);border:0.5px solid var(--line2);background:var(--bg3);color:var(--text);cursor:pointer;transition:all .15s;white-space:nowrap}
-.btn:hover{background:var(--bg4);border-color:var(--line3)}
-.btn:active{transform:scale(.98)}
-.btn.primary{background:var(--accent);color:var(--bg);border-color:var(--accent);font-weight:600}
-.btn.primary:hover{opacity:.9}
-.btn.sm{padding:6px 12px;font-size:11px}
-.btn.danger{background:rgba(224,82,82,0.15);color:#e88;border-color:rgba(224,82,82,0.3)}
-.btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
-textarea,input[type=text],input[type=email],input[type=password]{width:100%;padding:10px 14px;background:var(--bg);border:0.5px solid var(--line2);border-radius:8px;color:var(--text);font-family:var(--font-sans);font-size:13px;line-height:1.65;transition:border-color .15s;outline:none}
-textarea{resize:vertical;min-height:88px}
-input:focus,textarea:focus{border-color:var(--line3)}
-input::placeholder,textarea::placeholder{color:var(--text3)}
-.form-group{margin-bottom:14px}
-.form-label{font-size:11px;color:var(--text2);margin-bottom:5px;display:block}
-.thinking{display:flex;align-items:center;gap:10px;padding:14px 16px;border-radius:8px;background:var(--bg3);border:0.5px solid var(--line2);font-size:12px;color:var(--text2);margin-bottom:12px}
-.thinking-dots{display:flex;gap:4px}
-.thinking-dots span{width:5px;height:5px;border-radius:50%;background:var(--accent);opacity:.3;animation:pulse 1.2s infinite}
-.thinking-dots span:nth-child(2){animation-delay:.2s}
-.thinking-dots span:nth-child(3){animation-delay:.4s}
-@keyframes pulse{0%,100%{opacity:.3}50%{opacity:1}}
-.ai-response{background:var(--bg);border:0.5px solid var(--line2);border-radius:10px;padding:16px 18px;font-size:13px;line-height:1.75;color:var(--text2);margin-top:10px;white-space:pre-wrap}
-.ai-label{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);margin-bottom:6px}
-.feedback{padding:11px 14px;border-radius:8px;font-size:13px;line-height:1.6;margin-top:10px;display:none}
-.feedback.show{display:block}
-.feedback.success{background:rgba(76,175,125,0.1);color:#7dd4a8;border:0.5px solid rgba(76,175,125,0.3)}
-.feedback.danger{background:rgba(224,82,82,0.1);color:#e88;border:0.5px solid rgba(224,82,82,0.3)}
-.feedback.warning{background:rgba(212,168,83,0.1);color:var(--gold);border:0.5px solid rgba(212,168,83,0.3)}
-.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px}
-.stat-grid.two{grid-template-columns:1fr 1fr}
-.stat-box{padding:14px 16px;background:var(--bg2);border-radius:10px;border:0.5px solid var(--line)}
-.stat-num{font-family:var(--font-serif);font-size:26px;color:var(--text);letter-spacing:-.02em}
-.stat-lbl{font-size:10px;color:var(--text3);margin-top:2px}
-.bar-wrap{flex:1;height:5px;background:var(--bg4);border-radius:3px;overflow:hidden}
-.bar-fill{height:100%;border-radius:3px;transition:width .5s}
-.flex-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
-.flex-between{display:flex;align-items:center;justify-content:space-between}
-.tag{display:inline-block;padding:2px 9px;border-radius:20px;font-size:10px;border:0.5px solid var(--line2);color:var(--text3)}
-.tag.due{border-color:rgba(224,82,82,0.4);color:#e88;background:rgba(224,82,82,0.08)}
-.tag.soon{border-color:rgba(212,168,83,0.4);color:var(--gold)}
-.tag.fresh{border-color:rgba(76,175,125,0.4);color:#7dd4a8}
-.agent-badge{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:20px;background:rgba(201,185,154,0.1);border:0.5px solid rgba(201,185,154,0.25);font-size:10px;color:var(--accent);margin-bottom:6px}
-.live-dot{width:5px;height:5px;border-radius:50%;background:var(--green);animation:pulse 2s infinite}
-::-webkit-scrollbar{width:4px}
-::-webkit-scrollbar-thumb{background:var(--line2);border-radius:2px}
-@media(max-width:768px){.shell{flex-direction:column}.sidebar{width:100%;height:auto;flex-direction:row;flex-wrap:wrap;padding:8px;gap:4px;border-right:none;border-bottom:0.5px solid var(--line2)}.brand,.nav-sec,.sidebar-foot{display:none}.nav-item{padding:6px 10px;border-radius:20px;border-left:none;font-size:11px}.main{padding:16px}.stat-grid{grid-template-columns:1fr 1fr}}
+  /* ── Reset & Base ── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #ffffff;
+    --bg2: #f7f7f5;
+    --bg3: #f0efeb;
+    --text: #1a1a1a;
+    --text2: #6b6b6b;
+    --text3: #999;
+    --border: rgba(0,0,0,0.10);
+    --border2: rgba(0,0,0,0.18);
+    --border3: rgba(0,0,0,0.25);
+    --radius: 10px;
+    --radius-lg: 14px;
+    --blue: #185FA5; --blue-bg: #e6f1fb; --blue-text: #0c447c;
+    --green: #2a7a3b; --green-bg: #eaf3de; --green-text: #27500a;
+    --red: #c0392b; --red-bg: #fcebeb; --red-text: #791f1f;
+    --amber: #b45309; --amber-bg: #faeeda; --amber-text: #633806;
+    --purple: #534AB7; --purple-bg: #eeedfe; --purple-text: #3c3489;
+    --teal: #0F6E56; --teal-bg: #e1f5ee; --teal-text: #085041;
+    --brown: #854F0B; --brown-bg: #faeeda; --brown-text: #412402;
+    --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    --mono: 'SF Mono', 'Fira Code', monospace;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1a1a1a; --bg2: #242424; --bg3: #2e2e2e;
+      --text: #f0f0f0; --text2: #aaa; --text3: #666;
+      --border: rgba(255,255,255,0.10); --border2: rgba(255,255,255,0.18); --border3: rgba(255,255,255,0.28);
+      --blue-bg: #0c2a4a; --blue-text: #85b7eb;
+      --green-bg: #0d2a15; --green-text: #97c459;
+      --red-bg: #2a0d0d; --red-text: #f09595;
+      --amber-bg: #2a1a04; --amber-text: #fac775;
+      --purple-bg: #1e1a4a; --purple-text: #afa9ec;
+      --teal-bg: #042e24; --teal-text: #5dcaa5;
+      --brown-bg: #1a0e02; --brown-text: #fac775;
+    }
+  }
+  html, body { height: 100%; font-family: var(--font); background: var(--bg3); color: var(--text); font-size: 15px; line-height: 1.5; }
 
-/* Onboarding overlay */
-#onboarding{position:fixed;inset:0;background:var(--bg);z-index:100;display:flex;align-items:center;justify-content:center;padding:20px}
-.onboard-box{width:100%;max-width:480px}
-.onboard-title{font-family:var(--font-serif);font-size:32px;color:var(--text);margin-bottom:8px;line-height:1.15}
-.onboard-sub{font-size:13px;color:var(--text3);line-height:1.7;margin-bottom:28px}
-.onboard-tabs{display:flex;gap:4px;margin-bottom:20px;background:var(--bg2);padding:4px;border-radius:10px}
-.onboard-tab{flex:1;padding:8px;text-align:center;font-size:12px;color:var(--text2);cursor:pointer;border-radius:7px;transition:all .15s}
-.onboard-tab.active{background:var(--bg4);color:var(--text);font-weight:500}
-.key-note{font-size:11px;color:var(--text3);line-height:1.65;padding:10px 12px;background:var(--bg3);border-radius:8px;margin-bottom:14px}
+  /* ── Layout ── */
+  .app-shell { display: flex; height: 100vh; overflow: hidden; }
+  .sidebar { width: 220px; flex-shrink: 0; background: var(--bg); border-right: 0.5px solid var(--border); display: flex; flex-direction: column; overflow-y: auto; }
+  .main { flex: 1; overflow-y: auto; padding: 28px 32px; }
+  @media (max-width: 768px) {
+    .app-shell { flex-direction: column; }
+    .sidebar { width: 100%; height: auto; border-right: none; border-bottom: 0.5px solid var(--border); flex-direction: row; flex-wrap: wrap; padding: 10px; gap: 4px; overflow-x: auto; }
+    .main { padding: 16px; }
+    .sidebar .brand { display: none; }
+    .sidebar .nav-section-label { display: none; }
+    .sidebar .nav-item { padding: 6px 10px; font-size: 11px; border-radius: 20px; }
+  }
+
+  /* ── Sidebar ── */
+  .brand { padding: 20px 18px 14px; border-bottom: 0.5px solid var(--border); }
+  .brand-title { font-size: 13px; font-weight: 600; color: var(--text); letter-spacing: -0.01em; }
+  .brand-sub { font-size: 11px; color: var(--text3); margin-top: 2px; }
+  .nav-section-label { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: .06em; padding: 14px 18px 4px; }
+  .nav-item { display: flex; align-items: center; gap: 9px; padding: 8px 18px; font-size: 13px; color: var(--text2); cursor: pointer; transition: all .15s; border-left: 2px solid transparent; user-select: none; }
+  .nav-item:hover { background: var(--bg2); color: var(--text); }
+  .nav-item.active { color: var(--text); background: var(--bg2); border-left-color: var(--text); font-weight: 500; }
+  .nav-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .sidebar-footer { margin-top: auto; padding: 14px 18px; border-top: 0.5px solid var(--border); font-size: 11px; color: var(--text3); line-height: 1.6; }
+
+  /* ── Panels ── */
+  .panel { display: none; max-width: 720px; }
+  .panel.active { display: block; }
+
+  /* ── Cards ── */
+  .card { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: 18px 20px; margin-bottom: 12px; }
+  .card.accent { border-width: 1.5px; }
+
+  /* ── Typography ── */
+  .page-title { font-size: 22px; font-weight: 600; color: var(--text); margin-bottom: 4px; letter-spacing: -0.02em; }
+  .page-sub { font-size: 13px; color: var(--text2); margin-bottom: 22px; }
+  .section-label { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 8px; }
+  .card-title { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 3px; }
+  .card-sub { font-size: 12px; color: var(--text2); line-height: 1.55; margin-bottom: 10px; }
+  .qtext { font-size: 14px; color: var(--text); line-height: 1.7; margin-bottom: 14px; white-space: pre-line; }
+  .stext { font-size: 12px; color: var(--text2); line-height: 1.6; }
+
+  /* ── Buttons ── */
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: var(--radius); font-size: 13px; font-weight: 500; border: 0.5px solid var(--border2); background: var(--bg); color: var(--text); cursor: pointer; transition: all .15s; font-family: var(--font); white-space: nowrap; }
+  .btn:hover { background: var(--bg2); border-color: var(--border3); }
+  .btn:active { transform: scale(0.98); }
+  .btn.primary { background: var(--text); color: var(--bg); border-color: var(--text); }
+  .btn.primary:hover { opacity: .88; }
+  .btn.sm { padding: 5px 11px; font-size: 12px; }
+  .btn.xs { padding: 3px 8px; font-size: 11px; }
+  .btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+
+  /* ── Form Elements ── */
+  textarea { width: 100%; min-height: 88px; padding: 10px 14px; border: 0.5px solid var(--border2); border-radius: var(--radius); background: var(--bg); color: var(--text); font-size: 13px; font-family: var(--font); resize: vertical; line-height: 1.65; transition: border-color .15s; }
+  textarea:focus { outline: none; border-color: var(--border3); }
+
+  /* ── Choice Buttons ── */
+  .choice { display: block; width: 100%; text-align: left; padding: 10px 14px; margin-bottom: 8px; border: 0.5px solid var(--border); border-radius: var(--radius); background: var(--bg); color: var(--text); font-size: 13px; cursor: pointer; transition: all .15s; font-family: var(--font); line-height: 1.5; }
+  .choice:hover { background: var(--bg2); border-color: var(--border2); }
+  .choice.correct { background: var(--green-bg); border-color: var(--green); color: var(--green-text); }
+  .choice.incorrect { background: var(--red-bg); border-color: var(--red); color: var(--red-text); }
+
+  /* ── Feedback Boxes ── */
+  .feedback { padding: 11px 14px; border-radius: var(--radius); font-size: 13px; line-height: 1.6; margin-top: 12px; display: none; }
+  .feedback.show { display: block; }
+  .feedback.success { background: var(--green-bg); color: var(--green-text); border: 0.5px solid var(--green); }
+  .feedback.info { background: var(--blue-bg); color: var(--blue-text); border: 0.5px solid var(--blue); }
+  .feedback.warning { background: var(--amber-bg); color: var(--amber-text); border: 0.5px solid var(--amber); }
+  .feedback.danger { background: var(--red-bg); color: var(--red-text); border: 0.5px solid var(--red); }
+
+  /* ── Badges ── */
+  .badge { display: inline-block; padding: 3px 9px; border-radius: 20px; font-size: 11px; font-weight: 500; }
+  .badge.blue { background: var(--blue-bg); color: var(--blue-text); }
+  .badge.green { background: var(--green-bg); color: var(--green-text); }
+  .badge.red { background: var(--red-bg); color: var(--red-text); }
+  .badge.amber { background: var(--amber-bg); color: var(--amber-text); }
+  .badge.purple { background: var(--purple-bg); color: var(--purple-text); }
+  .badge.teal { background: var(--teal-bg); color: var(--teal-text); }
+
+  /* ── Progress ── */
+  .progress-dots { display: flex; gap: 4px; margin-bottom: 14px; }
+  .progress-dots span { height: 3px; flex: 1; border-radius: 2px; background: var(--bg3); transition: background .3s; }
+  .progress-dots span.done { background: var(--text); }
+  .progress-dots span.now { background: var(--border3); }
+  .bar-wrap { flex: 1; height: 7px; background: var(--bg3); border-radius: 4px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 4px; transition: width .5s; }
+
+  /* ── Stat Grid ── */
+  .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 14px; }
+  .stat-grid.two { grid-template-columns: 1fr 1fr; }
+  .stat-box { padding: 12px 14px; background: var(--bg2); border-radius: var(--radius); }
+  .stat-num { font-size: 24px; font-weight: 600; color: var(--text); letter-spacing: -0.02em; }
+  .stat-lbl { font-size: 11px; color: var(--text3); margin-top: 2px; }
+
+  /* ── Row Layout ── */
+  .flex-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .flex-row-between { display: flex; align-items: center; justify-content: space-between; }
+
+  /* ── Recommendation Card ── */
+  .rec-item { border: 0.5px solid var(--border); border-radius: var(--radius); padding: 12px 14px; margin-bottom: 8px; cursor: pointer; transition: all .15s; }
+  .rec-item:hover { border-color: var(--border2); background: var(--bg2); }
+  .rec-item.top { border-width: 1.5px; border-color: var(--border3); }
+  .rec-priority-bar { height: 3px; background: var(--bg3); border-radius: 2px; margin-top: 6px; overflow: hidden; }
+  .rec-priority-fill { height: 100%; border-radius: 2px; transition: width .5s; }
+
+  /* ── Agent Mini Row ── */
+  .agent-row { display: flex; align-items: center; gap: 10px; padding: 9px 11px; border-radius: var(--radius); border: 0.5px solid var(--border); margin-bottom: 6px; cursor: pointer; transition: all .15s; }
+  .agent-row:hover { background: var(--bg2); }
+
+  /* ── Timeline ── */
+  .tl-item { display: flex; gap: 12px; margin-bottom: 10px; align-items: flex-start; }
+  .tl-dot-wrap { display: flex; flex-direction: column; align-items: center; }
+  .tl-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; margin-top: 4px; }
+
+  /* ── Mastery ── */
+  .mastery-item { margin-bottom: 10px; }
+  .mastery-label { display: flex; justify-content: space-between; margin-bottom: 3px; }
+
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 3px; }
 </style>
 </head>
 <body>
 
-<!-- ═══ ONBOARDING ═══ -->
-<div id="onboarding">
-  <div class="onboard-box">
-    <div style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--text3);margin-bottom:16px">MI Learning Agents · Healthcare Education</div>
-    <div class="onboard-title">Theory-grounded<br>AI learning agents</div>
-    <div class="onboard-sub">7 agentic AI systems, each implementing a validated learning science mechanism. Your progress is tracked across sessions with spaced repetition reminders.</div>
-
-    <div class="onboard-tabs">
-      <div class="onboard-tab active" onclick="showTab('register')">New learner</div>
-      <div class="onboard-tab" onclick="showTab('login')">Return</div>
-    </div>
-
-    <div id="tab-register">
-      <div class="form-group">
-        <label class="form-label">Your name</label>
-        <input type="text" id="reg-name" placeholder="Dr. Jane Smith" />
-      </div>
-      <div class="form-group">
-        <label class="form-label">Email — for spaced repetition reminders</label>
-        <input type="email" id="reg-email" placeholder="you@institution.edu" />
-      </div>
-      <div class="form-group">
-        <label class="form-label">Anthropic API key — used only for your sessions</label>
-        <input type="password" id="reg-key" placeholder="sk-ant-api03-..." />
-        <div class="key-note" style="margin-top:8px">
-          Your key is encrypted and stored on the server. It is used only to power your agent sessions — never shared. Each API call costs ~$0.01. Get a key at <a href="https://console.anthropic.com" target="_blank" style="color:var(--accent)">console.anthropic.com</a>
-        </div>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Starting topic</label>
-        <input type="text" id="reg-topic" placeholder="Myocardial Infarction" value="Myocardial Infarction" />
-      </div>
-      <button class="btn primary" style="width:100%;justify-content:center" onclick="register()">Create profile &amp; start →</button>
-      <div class="feedback" id="reg-error"></div>
-    </div>
-
-    <div id="tab-login" style="display:none">
-      <div class="form-group">
-        <label class="form-label">Email address</label>
-        <input type="email" id="login-email" placeholder="you@institution.edu" />
-      </div>
-      <button class="btn primary" style="width:100%;justify-content:center" onclick="login()">Continue learning →</button>
-      <div class="feedback" id="login-error"></div>
-    </div>
-  </div>
-</div>
-
-<!-- ═══ APP SHELL ═══ -->
-<div class="shell" style="display:none" id="app">
+<div class="app-shell">
+  <!-- ═══ SIDEBAR ═══ -->
   <nav class="sidebar">
     <div class="brand">
-      <div class="brand-title">MI Learning<br>Agents</div>
-      <div class="brand-sub" style="margin-top:6px" id="sb-learner">Agentic AI</div>
+      <div class="brand-title">MI Learning Agents</div>
+      <div class="brand-sub">Healthcare Education · 4 Agents</div>
     </div>
-    <div class="nav-sec">Orchestrator</div>
-    <div class="nav-item active" data-panel="dashboard"><div class="nav-dot" style="background:#555"></div>Dashboard</div>
-    <div class="nav-item" data-panel="recommend"><div class="nav-dot" style="background:#aaa"></div>Recommend</div>
-    <div class="nav-sec">7 Agents</div>
-    <div class="nav-item" data-panel="retrieval"><div class="nav-dot" style="background:#5b9bd5"></div>1 · Retrieval</div>
-    <div class="nav-item" data-panel="spacing"><div class="nav-dot" style="background:#4caf7d"></div>2 · Spacing</div>
-    <div class="nav-item" data-panel="interleaving"><div class="nav-dot" style="background:#c4813a"></div>3 · Interleaving</div>
-    <div class="nav-item" data-panel="generation"><div class="nav-dot" style="background:#c0604a"></div>4 · Generation</div>
-    <div class="nav-item" data-panel="elaboration"><div class="nav-dot" style="background:#6aab44"></div>5 · Elaboration</div>
-    <div class="nav-item" data-panel="reflection"><div class="nav-dot" style="background:#9b7fd4"></div>6 · Reflection</div>
-    <div class="nav-item" data-panel="difficulty"><div class="nav-dot" style="background:#c4607a"></div>7 · Difficulty</div>
-    <div class="sidebar-foot">
-      Topic: <span id="sb-topic">—</span><br>
-      Powered by Claude claude-sonnet-4-20250514<br>
-      Rejeleene &amp; Mehta · CCF 2026<br><br>
-      <button class="btn sm" onclick="logout()" style="width:100%;justify-content:center;margin-top:4px">Sign out</button>
+
+    <div class="nav-section-label">Orchestrator</div>
+    <div class="nav-item active" data-panel="dashboard">
+      <div class="nav-dot" style="background:#888"></div>Dashboard
+    </div>
+    <div class="nav-item" data-panel="recommend">
+      <div class="nav-dot" style="background:#222"></div>Recommend
+    </div>
+
+    <div class="nav-section-label">Agents</div>
+    <div class="nav-item" data-panel="retrieval">
+      <div class="nav-dot" style="background:#185FA5"></div>1 · Retrieval
+    </div>
+    <div class="nav-item" data-panel="spacing">
+      <div class="nav-dot" style="background:#0F6E56"></div>2 · Spacing
+    </div>
+    <div class="nav-item" data-panel="interleaving">
+      <div class="nav-dot" style="background:#854F0B"></div>3 · Interleaving
+    </div>
+    <div class="nav-item" data-panel="reflection">
+      <div class="nav-dot" style="background:#534AB7"></div>4 · Reflection
+    </div>
+
+    <div class="sidebar-footer">
+      Topic: Myocardial Infarction<br>
+      Cleveland Clinic · AI in Education<br>
+      Rejeleene &amp; Mehta, 2026
     </div>
   </nav>
 
+  <!-- ═══ MAIN CONTENT ═══ -->
   <main class="main">
-    <div class="panel active" id="panel-dashboard"><div id="dash-body"></div></div>
+
+    <!-- ── DASHBOARD ── -->
+    <div class="panel active" id="panel-dashboard">
+      <div class="page-title">Learning Dashboard</div>
+      <div class="page-sub">Myocardial Infarction · Live performance across all 4 agents</div>
+      <div id="dash-body"></div>
+    </div>
+
+    <!-- ── RECOMMEND ── -->
     <div class="panel" id="panel-recommend">
-      <div class="page-title">Orchestrator</div>
-      <div class="page-sub">AI-ranked agent recommendations based on your live learning state</div>
+      <div class="page-title">Agent Recommendations</div>
+      <div class="page-sub">Orchestrator — ranked by current learning need</div>
       <div id="rec-body"></div>
     </div>
+
+    <!-- ── RETRIEVAL ── -->
     <div class="panel" id="panel-retrieval">
-      <div class="agent-badge"><div class="live-dot"></div>Live agentic · tool use enabled</div>
       <div class="page-title">Retrieval Agent</div>
-      <div class="page-sub">Testing Effect · Roediger &amp; Karpicke 2006 — reads your history, generates targeted questions, saves results</div>
+      <div class="page-sub">Testing Effect · Roediger &amp; Karpicke 2006 — active recall strengthens memory traces</div>
       <div id="ret-body"></div>
     </div>
+
+    <!-- ── SPACING ── -->
     <div class="panel" id="panel-spacing">
-      <div class="agent-badge"><div class="live-dot"></div>Live agentic · tool use enabled</div>
       <div class="page-title">Spacing Agent</div>
-      <div class="page-sub">Ebbinghaus Forgetting Curve / SM-2 — schedules reviews, sends email reminders, updates intervals</div>
+      <div class="page-sub">Spaced Repetition · Ebbinghaus 1885 / SM-2 — review at the moment of near-forgetting</div>
       <div id="sp-body"></div>
     </div>
+
+    <!-- ── INTERLEAVING ── -->
     <div class="panel" id="panel-interleaving">
-      <div class="agent-badge"><div class="live-dot"></div>Live agentic · tool use enabled</div>
       <div class="page-title">Interleaving Agent</div>
-      <div class="page-sub">Discrimination Learning · Kornell &amp; Bjork 2008 — generates mixed-domain questions, tracks domain identification</div>
+      <div class="page-sub">Interleaved Practice · Kornell &amp; Bjork 2008 — mixing topics builds discrimination and transfer</div>
       <div id="il-body"></div>
     </div>
-    <div class="panel" id="panel-generation">
-      <div class="agent-badge"><div class="live-dot"></div>Live agentic · tool use enabled</div>
-      <div class="page-title">Generation Agent</div>
-      <div class="page-sub">Generation Effect · Slamecka &amp; Graf 1978 — compares your generation to expert knowledge, flags gaps to spacing agent</div>
-      <div id="gen-body"></div>
-    </div>
-    <div class="panel" id="panel-elaboration">
-      <div class="agent-badge"><div class="live-dot"></div>Live agentic · tool use enabled</div>
-      <div class="page-title">Elaboration Agent</div>
-      <div class="page-sub">Elaborative Interrogation · Pressley et al. 1992 — reads depth of reasoning, decides to probe deeper or redirect</div>
-      <div id="elab-body"></div>
-    </div>
+
+    <!-- ── REFLECTION ── -->
     <div class="panel" id="panel-reflection">
-      <div class="agent-badge"><div class="live-dot"></div>Live agentic · tool use enabled</div>
       <div class="page-title">Reflection Agent</div>
-      <div class="page-sub">Metacognitive Reflection · Schön 1983 — reads your actual error history, identifies blind spots, saves reflections</div>
+      <div class="page-sub">Metacognitive Reflection · Schön 1983 — structured post-session review deepens understanding</div>
       <div id="ref-body"></div>
     </div>
-    <div class="panel" id="panel-difficulty">
-      <div class="agent-badge"><div class="live-dot"></div>Live agentic · tool use enabled</div>
-      <div class="page-title">Difficulty Agent</div>
-      <div class="page-sub">Desirable Difficulties · Bjork 1994 — calibrates challenge from your performance history, autonomously adjusts level</div>
-      <div id="dif-body"></div>
-    </div>
+
   </main>
 </div>
 
 <script>
 // ═══════════════════════════════════════════════════════
-// STATE
+// NAVIGATION
 // ═══════════════════════════════════════════════════════
-let LEARNER = null;  // { id, email, name, topic }
-let STATS   = null;
-let CONCEPTS = [];
-
 function goTo(id) {
   document.querySelectorAll('.nav-item').forEach(n => n.classList.toggle('active', n.dataset.panel === id));
   document.querySelectorAll('.panel').forEach(p => p.classList.toggle('active', p.id === 'panel-' + id));
-  window.scrollTo(0,0);
+  window.scrollTo(0, 0);
 }
 document.querySelectorAll('.nav-item').forEach(n => n.onclick = () => goTo(n.dataset.panel));
 
 // ═══════════════════════════════════════════════════════
-// ONBOARDING
+// GLOBAL STATE
 // ═══════════════════════════════════════════════════════
-function showTab(tab) {
-  document.getElementById('tab-register').style.display = tab === 'register' ? 'block' : 'none';
-  document.getElementById('tab-login').style.display = tab === 'login' ? 'block' : 'none';
-  document.querySelectorAll('.onboard-tab').forEach((t,i) => t.classList.toggle('active', (i===0&&tab==='register')||(i===1&&tab==='login')));
-}
-
-async function register() {
-  const name   = document.getElementById('reg-name').value.trim();
-  const email  = document.getElementById('reg-email').value.trim();
-  const apiKey = document.getElementById('reg-key').value.trim();
-  const topic  = document.getElementById('reg-topic').value.trim() || 'Myocardial Infarction';
-  const errEl  = document.getElementById('reg-error');
-
-  if (!name||!email||!apiKey) { showErr(errEl,'Please fill in all fields'); return; }
-  if (!apiKey.startsWith('sk-ant-')) { showErr(errEl,'API key must start with sk-ant-'); return; }
-
-  const btn = document.querySelector('#tab-register .btn.primary');
-  btn.textContent = 'Validating key…'; btn.disabled = true;
-
-  try {
-    const res = await fetch('/api/learner', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, name, apiKey, topic })
-    });
-    const data = await res.json();
-    if (!res.ok) { showErr(errEl, data.error); btn.textContent='Create profile & start →'; btn.disabled=false; return; }
-    await initApp(data.learner);
-  } catch(e) {
-    showErr(errEl, 'Server error: ' + e.message);
-    btn.textContent='Create profile & start →'; btn.disabled=false;
+const STATE = {
+  sessions: [],
+  agentStats: {
+    retrieval:   { uses: 0, correct: 0, total: 0, lastUsed: null },
+    spacing:     { uses: 0, reviewed: 0, due: 2, lastUsed: null },
+    interleaving:{ uses: 0, completed: 0, lastUsed: null },
+    reflection:  { uses: 0, entries: 0, lastUsed: null },
+  },
+  conceptMastery: {
+    'STEMI ECG criteria': 0.55, 'Killip classification': 0.72,
+    'Troponin kinetics': 0.80, 'Door-to-balloon': 0.45,
+    'Fibrinolysis indications': 0.60, 'Post-MI complications': 0.38,
+    'DAPT regimen': 0.68, 'Cardiogenic shock': 0.30,
+  },
+  learnerProfile: {
+    retrievalAccuracy: 0.67, spacingCompliance: 0.80,
+    reflectionEngagement: 0.40,
   }
-}
+};
 
-async function login() {
-  const email = document.getElementById('login-email').value.trim();
-  const errEl = document.getElementById('login-error');
-  if (!email) { showErr(errEl,'Enter your email'); return; }
-  try {
-    const res = await fetch('/api/learner/login', {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ email })
-    });
-    const data = await res.json();
-    if (!res.ok) { showErr(errEl, data.error); return; }
-    await initApp(data.learner, data.stats, data.dueCount);
-  } catch(e) { showErr(errEl, 'Server error: ' + e.message); }
-}
+const AGENTS = [
+  { id: 'retrieval',    label: 'Retrieval',    color: '#185FA5', theory: 'Testing Effect' },
+  { id: 'spacing',      label: 'Spacing',      color: '#0F6E56', theory: 'Forgetting Curve' },
+  { id: 'interleaving', label: 'Interleaving', color: '#854F0B', theory: 'Discrimination Learning' },
+  { id: 'reflection',   label: 'Reflection',   color: '#534AB7', theory: 'Metacognition' },
+];
 
-function showErr(el, msg) {
-  el.className = 'feedback show danger';
-  el.textContent = msg;
-}
-
-async function initApp(learner, stats, dueCount) {
-  LEARNER = learner;
-  localStorage.setItem('mi_learner_id', learner.id);
-
-  // Load full profile
-  try {
-    const res = await fetch(`/api/learner/${learner.id}`);
-    const data = await res.json();
-    STATS = data.stats;
-    CONCEPTS = data.concepts || [];
-  } catch(e) {}
-
-  document.getElementById('onboarding').style.display = 'none';
-  document.getElementById('app').style.display = 'flex';
-  document.getElementById('sb-learner').textContent = learner.name;
-  document.getElementById('sb-topic').textContent = learner.topic;
-
-  // Wait for app to be visible before initializing agent panels
-  await new Promise(r => setTimeout(r, 50));
-  initAgents();
+function logEvent(agentId, eventType, data = {}) {
+  const s = STATE.agentStats[agentId];
+  if (!s) return;
+  s.uses++;
+  s.lastUsed = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  STATE.sessions.push({ agentId, eventType, data, time: Date.now() });
+  if (eventType === 'correct')  { s.correct = (s.correct||0)+1; s.total = (s.total||0)+1; }
+  if (eventType === 'incorrect') { s.total = (s.total||0)+1; }
+  if (eventType === 'reflection_saved') s.entries = (s.entries||0)+1;
+  if (eventType === 'interleave_reveal') s.completed = (s.completed||0)+1;
   renderDashboard();
   renderRecommend();
 }
-
-function logout() {
-  localStorage.removeItem('mi_learner_id');
-  LEARNER = null; STATS = null; CONCEPTS = [];
-  document.getElementById('onboarding').style.display = 'flex';
-  document.getElementById('app').style.display = 'none';
-}
-
-// Auto-login if returning
-window.addEventListener('DOMContentLoaded', async () => {
-  const savedId = localStorage.getItem('mi_learner_id');
-  if (savedId) {
-    try {
-      const res = await fetch(`/api/learner/${savedId}`);
-      if (res.ok) {
-        const data = await res.json();
-        await initApp(data.learner, data.stats, data.dueCount);
-        return;
-      }
-    } catch(e) {}
-  }
-});
 
 // ═══════════════════════════════════════════════════════
 // DASHBOARD
 // ═══════════════════════════════════════════════════════
-async function renderDashboard() {
+function renderDashboard() {
   const el = document.getElementById('dash-body');
-  if (!LEARNER) return;
-
-  // Refresh stats
-  try {
-    const res = await fetch(`/api/learner/${LEARNER.id}`);
-    const data = await res.json();
-    STATS = data.stats; CONCEPTS = data.concepts || [];
-  } catch(e) {}
-
-  const due = CONCEPTS.filter(c => new Date(c.next_review) <= new Date());
-
-  const topics = ['Myocardial Infarction','Heart Failure','Sepsis','Diabetes','Hypertension','Stroke','Pneumonia','Pulmonary Embolism','Atrial Fibrillation','Acute Kidney Injury','COPD','Liver Failure'];
+  const stats = STATE.agentStats;
+  const totalUses = Object.values(stats).reduce((a, s) => a + s.uses, 0);
+  const avgMastery = Math.round(Object.values(STATE.conceptMastery).reduce((a,v)=>a+v,0)/8*100);
+  const acc = stats.retrieval.total ? Math.round(stats.retrieval.correct / stats.retrieval.total * 100) : '—';
+  const due = stats.spacing.due;
 
   el.innerHTML = `
-    <div class="page-title">Learning Dashboard</div>
-    <div class="page-sub">Welcome back, ${LEARNER.name.split(' ')[0]} · Topic: <strong style="color:var(--text)">${LEARNER.topic}</strong></div>
-
-    <div class="card" style="margin-bottom:16px">
-      <div class="sec">Change topic — all 7 agents adapt instantly</div>
-      <div style="display:flex;gap:8px;margin-bottom:10px">
-        <input type="text" id="topic-input" value="${LEARNER.topic}" placeholder="Any medical topic…" style="flex:1" onkeydown="if(event.key==='Enter')changeTopic()" />
-        <button class="btn primary" onclick="changeTopic()">Apply</button>
-      </div>
-      <div style="display:flex;gap:5px;flex-wrap:wrap">
-        ${topics.map(t => `<button class="btn sm" style="border-radius:20px;padding:4px 10px;font-size:10px" onclick="document.getElementById('topic-input').value='${t}';changeTopic()">${t}</button>`).join('')}
-      </div>
-    </div>
-
     <div class="stat-grid">
-      <div class="stat-box"><div class="stat-num">${STATS?.total_answers||0}</div><div class="stat-lbl">total answers</div></div>
-      <div class="stat-box"><div class="stat-num">${STATS?.accuracy||'—'}${STATS?.accuracy?'%':''}</div><div class="stat-lbl">accuracy</div></div>
-      <div class="stat-box"><div class="stat-num">${STATS?.agents_used||0}</div><div class="stat-lbl">agents used</div></div>
-      <div class="stat-box"><div class="stat-num" style="color:${due.length>0?'#e05252':'#4caf7d'}">${due.length}</div><div class="stat-lbl">due for review</div></div>
+      <div class="stat-box"><div class="stat-num">${totalUses}</div><div class="stat-lbl">agent uses</div></div>
+      <div class="stat-box"><div class="stat-num">${avgMastery}%</div><div class="stat-lbl">avg mastery</div></div>
+      <div class="stat-box"><div class="stat-num">${typeof acc==='number'?acc+'%':acc}</div><div class="stat-lbl">retrieval acc.</div></div>
+      <div class="stat-box"><div class="stat-num">${due}</div><div class="stat-lbl">due for review</div></div>
     </div>
 
     <div class="card">
-      <div class="sec">Spaced repetition schedule</div>
-      ${CONCEPTS.length === 0 ? '<div style="font-size:12px;color:var(--text3)">No concepts tracked yet — use any agent to start building your schedule.</div>' : ''}
-      ${CONCEPTS.map(c => {
-        const isDue = new Date(c.next_review) <= new Date();
-        const daysUntil = Math.ceil((new Date(c.next_review) - new Date()) / 86400000);
-        const pct = c.retention_pct || 0;
-        const col = pct>=75?'#4caf7d':pct>=50?'#d4a853':'#e05252';
-        return `<div style="margin-bottom:11px">
-          <div class="flex-between" style="margin-bottom:4px">
-            <span style="font-size:12px;color:var(--text)">${c.name}</span>
-            <span class="tag ${isDue?'due':daysUntil<=3?'soon':'fresh'}">${isDue?'due now':daysUntil<=0?'today':'in '+daysUntil+'d'}</span>
-          </div>
-          <div class="flex-row" style="margin-bottom:1px">
-            <div class="bar-wrap"><div class="bar-fill" style="width:${pct}%;background:${col}"></div></div>
-            <span style="font-size:10px;color:var(--text3);width:55px;text-align:right;flex-shrink:0">${c.reps===0?'new':pct+'% ret.'}</span>
-          </div>
-          <div style="font-size:10px;color:var(--text3)">Rep ${c.reps} · interval ${c.interval_days}d</div>
+      <div class="section-label">Concept mastery</div>
+      ${Object.entries(STATE.conceptMastery).map(([k,v]) => {
+        const pct = Math.round(v*100);
+        const col = v>=0.75?'#2a7a3b':v>=0.50?'#b45309':'#c0392b';
+        return `<div class="mastery-item">
+          <div class="mastery-label"><span class="stext" style="color:var(--text)">${k}</span><span class="stext">${pct}%</span></div>
+          <div class="bar-wrap"><div class="bar-fill" style="width:${pct}%;background:${col}"></div></div>
         </div>`;
       }).join('')}
     </div>
 
-    ${due.length > 0 ? `<div class="card" style="border-color:rgba(224,82,82,0.3)">
-      <div style="font-size:13px;color:#e88;margin-bottom:8px;font-weight:500">${due.length} concept${due.length>1?'s':''} due for review</div>
-      <div style="font-size:12px;color:var(--text3);margin-bottom:10px">The Spacing Agent will read your recall attempts and update your schedule using the SM-2 algorithm.</div>
-      <button class="btn primary" onclick="goTo('spacing')">Start review session →</button>
-    </div>` : ''}`;
-}
+    <div class="card">
+      <div class="section-label">Agent activity</div>
+      ${AGENTS.map(a => {
+        const s = stats[a.id];
+        return `<div class="agent-row" onclick="goTo('${a.id}')">
+          <div class="nav-dot" style="background:${s.uses>0?a.color:'var(--border2)'}"></div>
+          <span style="font-size:13px;color:var(--text);flex:1">${a.label}</span>
+          <span class="stext">${a.theory}</span>
+          <span style="font-size:12px;color:var(--text2);width:50px;text-align:right">${s.uses} use${s.uses!==1?'s':''}</span>
+          ${s.lastUsed?`<span class="stext">${s.lastUsed}</span>`:`<span style="font-size:11px;color:var(--text3)">unused</span>`}
+        </div>`;
+      }).join('')}
+    </div>
 
-async function changeTopic() {
-  const t = document.getElementById('topic-input')?.value?.trim();
-  if (!t || !LEARNER) return;
-  LEARNER.topic = t;
-  document.getElementById('sb-topic').textContent = t;
-  await fetch(`/api/learner/${LEARNER.id}/topic`, {
-    method:'PATCH', headers:{'Content-Type':'application/json'},
-    body: JSON.stringify({ topic: t })
-  });
-  renderDashboard();
-  renderRecommend();
+    <div class="card">
+      <div class="section-label">Learner profile</div>
+      ${[
+        ['Retrieval accuracy', Math.round(STATE.learnerProfile.retrievalAccuracy*100)+'%', STATE.learnerProfile.retrievalAccuracy, '#185FA5'],
+        ['Spacing compliance', Math.round(STATE.learnerProfile.spacingCompliance*100)+'%', STATE.learnerProfile.spacingCompliance, '#0F6E56'],
+        ['Reflection engagement', Math.round(STATE.learnerProfile.reflectionEngagement*100)+'%', STATE.learnerProfile.reflectionEngagement, '#534AB7'],
+      ].map(([l,val,frac,col]) => `<div class="flex-row">
+        <span class="stext" style="width:160px;flex-shrink:0;color:var(--text)">${l}</span>
+        <div class="bar-wrap"><div class="bar-fill" style="width:${Math.round(frac*100)}%;background:${col}"></div></div>
+        <span style="font-size:12px;color:var(--text);width:38px;text-align:right;flex-shrink:0">${val}</span>
+      </div>`).join('')}
+    </div>
+
+    <div class="card">
+      <div class="section-label">Session log</div>
+      ${STATE.sessions.length === 0
+        ? '<div class="stext">No events yet — use any agent to populate the log.</div>'
+        : STATE.sessions.slice(-6).reverse().map(ev => {
+            const meta = AGENTS.find(a => a.id === ev.agentId);
+            return `<div class="tl-item">
+              <div class="tl-dot-wrap"><div class="tl-dot" style="background:${meta?.color||'#888'}"></div></div>
+              <div><div style="font-size:13px;color:var(--text)">${meta?.label||ev.agentId} — ${ev.eventType}</div>
+              <div class="stext">${new Date(ev.time).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit',second:'2-digit'})}</div></div>
+            </div>`;
+          }).join('')}
+    </div>`;
 }
 
 // ═══════════════════════════════════════════════════════
-// RECOMMEND (orchestrator)
+// RECOMMEND
 // ═══════════════════════════════════════════════════════
-async function renderRecommend() {
+function computeRecs() {
+  const st = STATE.agentStats; const lp = STATE.learnerProfile;
+  const weakConcepts = Object.values(STATE.conceptMastery).filter(v=>v<0.5).length;
+  return AGENTS.map(a => {
+    let score = 0, reason = '', urgency = 'low';
+    if (a.id==='spacing' && st.spacing.due>0) { score=40; urgency='high'; reason=`${st.spacing.due} concept${st.spacing.due>1?'s':''} at the forgetting threshold — review now for maximum consolidation.`; }
+    if (a.id==='retrieval' && lp.retrievalAccuracy<0.75) { score=Math.max(score,35); urgency='high'; reason=reason||`Retrieval accuracy is ${Math.round(lp.retrievalAccuracy*100)}% — below the 75% mastery threshold. More practice will strengthen weak memory traces.`; }
+    if (a.id==='retrieval' && weakConcepts>2) { score=Math.max(score,25); reason=reason||`${weakConcepts} concepts below 50% mastery — retrieval practice will identify the most fragile knowledge.`; }
+    if (a.id==='interleaving' && st.interleaving.uses===0 && st.retrieval.uses>0) { score=Math.max(score,22); urgency='medium'; reason=`You have practiced within single topics. Interleaving across MI domains will build discrimination and transfer.`; }
+    if (a.id==='reflection' && lp.reflectionEngagement<0.5 && st.retrieval.total>2) { score=Math.max(score,20); reason=reason||`Reflection engagement is low. After ${st.retrieval.total} retrieval attempts, structured reflection will consolidate your learning.`; }
+    if (score===0) { score=5+Math.floor(Math.random()*8); reason=`Balanced practice — ${a.theory} supports durable learning at this stage.`; }
+    return { ...a, score, reason, urgency };
+  }).sort((a,b) => b.score-a.score);
+}
+
+function renderRecommend() {
   const el = document.getElementById('rec-body');
-  if (!LEARNER) return;
-  el.innerHTML = '';
-  const t = addThinking(el, 'Orchestrator analysing your learning state…');
-  try {
-    const res = await fetch(`/api/learner/${LEARNER.id}`);
-    const data = await res.json();
-    STATS = data.stats; CONCEPTS = data.concepts || [];
-    const due = CONCEPTS.filter(c => new Date(c.next_review) <= new Date());
+  const recs = computeRecs();
+  const top = recs[0];
+  const urgencyBadge = u => `<span class="badge ${u==='high'?'red':u==='medium'?'amber':'blue'}">${u}</span>`;
 
-    // Call agent endpoint for orchestrator recommendation
-    const r = await fetch(`/api/agent/orchestrator`, {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({
-        learnerId: LEARNER.id,
-        topic: LEARNER.topic,
-        message: `Learner profile: accuracy=${data.stats?.accuracy||0}%, total_answers=${data.stats?.total_answers||0}, agents_used=${data.stats?.agents_used||0}, due_reviews=${due.length}, topic=${LEARNER.topic}. Rank the 7 agents by current learning need and give a 1-sentence rationale for each. Return JSON: {"rankings":[{"agent":"name","urgency":"high|medium|low","rationale":"..."}]}`
-      })
-    });
-    t.remove();
-    const rData = await r.json();
-    let rankings = [];
-    try { rankings = JSON.parse(rData.text.replace(/```json|```/g,'')).rankings; } catch(e) {}
-
-    const agents = [
-      {id:'retrieval',label:'Retrieval',color:'#5b9bd5'},
-      {id:'spacing',label:'Spacing',color:'#4caf7d'},
-      {id:'interleaving',label:'Interleaving',color:'#c4813a'},
-      {id:'generation',label:'Generation',color:'#c0604a'},
-      {id:'elaboration',label:'Elaboration',color:'#6aab44'},
-      {id:'reflection',label:'Reflection',color:'#9b7fd4'},
-      {id:'difficulty',label:'Difficulty',color:'#c4607a'},
-    ];
-
-    // Merge AI rankings with agent list
-    const ranked = rankings.length > 0
-      ? rankings.map(r => ({...agents.find(a=>a.label.toLowerCase()===r.agent.toLowerCase())||agents[0], ...r}))
-      : agents.map((a,i) => ({...a, urgency:'medium', rationale:'Balanced practice recommended.'}));
-
-    const top = ranked[0] || agents[0];
-    const badge = u => `<span style="font-size:10px;padding:2px 8px;border-radius:20px;border:0.5px solid ${u==='high'?'rgba(224,82,82,0.4)':u==='medium'?'rgba(212,168,83,0.4)':'var(--line)'};color:${u==='high'?'#e88':u==='medium'?'var(--gold)':'var(--text3)'}">${u}</span>`;
-
-    el.innerHTML = `
-      <div class="card glow">
-        <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
-          <div style="width:36px;height:36px;border-radius:50%;border:0.5px solid ${top.color};display:flex;align-items:center;justify-content:center;flex-shrink:0"><div style="width:9px;height:9px;border-radius:50%;background:${top.color}"></div></div>
-          <div style="flex:1"><div style="font-family:var(--font-serif);font-size:17px;color:var(--text)">${top.label} Agent</div><div style="font-size:11px;color:var(--text3)">AI-ranked recommendation</div></div>
-          ${badge(top.urgency)}
+  el.innerHTML = `
+    <div class="card accent" style="border-color:${top.color}">
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:12px">
+        <div style="width:38px;height:38px;border-radius:50%;background:${top.color}20;border:0.5px solid ${top.color};display:flex;align-items:center;justify-content:center;flex-shrink:0">
+          <div style="width:10px;height:10px;border-radius:50%;background:${top.color}"></div>
         </div>
-        <div style="font-size:13px;color:var(--text2);line-height:1.65;margin-bottom:14px">${top.rationale}</div>
-        <button class="btn primary" onclick="goTo('${top.id}')">Launch ${top.label} Agent →</button>
+        <div style="flex:1">
+          <div style="font-size:16px;font-weight:600;color:var(--text)">${top.label} Agent</div>
+          <div class="stext">${top.theory}</div>
+        </div>
+        ${urgencyBadge(top.urgency)}
       </div>
-      <div class="card">
-        <div class="sec">All agents · AI-ranked by learning need</div>
-        ${ranked.map((r,i) => `<div style="border:0.5px solid ${i===0?'var(--line2)':'var(--line)'};border-radius:10px;padding:12px 14px;margin-bottom:8px;cursor:pointer;transition:all .15s" onclick="goTo('${r.id}')" onmouseover="this.style.background='var(--bg3)'" onmouseout="this.style.background=''">
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-            <span style="font-size:10px;color:var(--text3);width:16px">${i+1}</span>
+      <div style="font-size:13px;color:var(--text2);line-height:1.65;margin-bottom:14px">${top.reason}</div>
+      <button class="btn primary" onclick="goTo('${top.id}')">Launch ${top.label} Agent →</button>
+    </div>
+
+    <div class="card">
+      <div class="section-label">All agents ranked by learning need</div>
+      ${recs.map((r,i) => `
+        <div class="rec-item${i===0?' top':''}" onclick="goTo('${r.id}')">
+          <div style="display:flex;align-items:center;gap:8px">
+            <span style="font-size:11px;color:var(--text3);width:18px">${i+1}</span>
             <div class="nav-dot" style="background:${r.color}"></div>
-            <span style="font-size:12px;font-weight:${i===0?'600':'400'};color:var(--text);flex:1">${r.label}</span>
-            ${badge(r.urgency)}
+            <span style="font-size:13px;font-weight:${i===0?'600':'400'};color:var(--text);flex:1">${r.label}</span>
+            ${urgencyBadge(r.urgency)}
           </div>
-          <div style="height:2px;background:var(--bg4);border-radius:1px;margin-bottom:6px;overflow:hidden"><div style="height:100%;background:${r.color};width:${100-i*12}%;border-radius:1px"></div></div>
-          <div style="font-size:11px;color:var(--text3)">${r.rationale}</div>
+          <div class="rec-priority-bar"><div class="rec-priority-fill" style="width:${Math.round(r.score/recs[0].score*100)}%;background:${r.color}"></div></div>
+          <div class="stext" style="margin-top:5px">${r.reason}</div>
         </div>`).join('')}
-      </div>`;
-  } catch(e) {
-    t.remove();
-    el.innerHTML = `<div class="feedback show danger">Could not load recommendations: ${e.message}</div>`;
-  }
+    </div>
+
+    <div class="card">
+      <div class="section-label">How recommendations are computed</div>
+      <div class="stext">The orchestrator scores each agent across 4 signals: retrieval accuracy, spacing urgency (forgetting curve position), concept mastery gaps, and reflection engagement. Scores update in real time as you use agents.</div>
+    </div>`;
 }
 
 // ═══════════════════════════════════════════════════════
-// GENERIC AGENT UI — all 7 agents use same pattern
+// AGENT 1 — RETRIEVAL
 // ═══════════════════════════════════════════════════════
-function initAgents() {
-  const agents = [
-    { id:'retrieval',   prompt:'Start a retrieval practice session. Check my history and generate a question targeting my weakest area.' },
-    { id:'spacing',     prompt:'Check which concepts are due for spaced review and start the review session.' },
-    { id:'interleaving',prompt:'Generate an interleaved question from a domain I have not practiced recently.' },
-    { id:'generation',  prompt:'Select a concept I have not recently generated about (or one with identified gaps) and give me a generation cue.' },
-    { id:'elaboration', prompt:'Start an elaboration session on a concept where my mechanistic understanding is shallow based on my history.' },
-    { id:'reflection',  prompt:'Read my performance history and give me a targeted reflection prompt based on patterns you find in my actual errors and gaps.' },
-    { id:'difficulty',  prompt:'Check my recent performance and generate a question at the right difficulty level for the 60-70% success zone.' },
+(function() {
+  const Qs = [
+    { q: 'A 62-year-old has crushing substernal pain, diaphoresis, and ST-elevation in leads II, III, aVF. Which artery is most likely occluded?', opts: ['Left anterior descending (LAD)', 'Right coronary artery (RCA)', 'Left circumflex artery (LCx)', 'Left main coronary artery'], ans: 1, exp: 'Inferior STEMI (STE in II, III, aVF) is caused by RCA occlusion in ~80% of cases. The RCA supplies the inferior wall, posterior wall, SA and AV nodes.' },
+    { q: 'Which biomarker has the highest sensitivity for MI in the first 3 hours using modern assays?', opts: ['CK-MB', 'Standard Troponin I', 'High-sensitivity Troponin T (hs-TnT)', 'Myoglobin'], ans: 2, exp: 'hs-TnT detects injury within 1–3 hours, enabling the ESC 0h/3h rapid rule-out algorithm. Standard troponin requires 6 hours for reliable detection.' },
+    { q: 'Primary PCI cannot be performed within 120 minutes of first medical contact. What is the preferred reperfusion strategy?', opts: ['Observation with anticoagulation', 'Primary PCI regardless of time', 'Fibrinolysis followed by transfer for angiography', 'Emergency CABG'], ans: 2, exp: 'ESC guidelines recommend fibrinolysis when primary PCI exceeds 120 minutes. Pharmaco-invasive strategy (lytics → angiography at 3–24h) follows.' },
+    { q: 'Killip Class III is characterized by which clinical finding?', opts: ['No signs of heart failure', 'Mild pulmonary rales + S3 gallop', 'Acute pulmonary edema with severe bilateral rales', 'Cardiogenic shock with SBP <90 mmHg'], ans: 2, exp: 'Killip III = acute pulmonary edema. Killip I = no HF signs (mortality ~6%). Killip IV = cardiogenic shock (mortality ~81%).' },
+    { q: 'A new harsh holosystolic murmur at the left lower sternal border appears on post-MI day 5. Most likely diagnosis?', opts: ['Acute mitral regurgitation', 'Ventricular septal rupture (VSR)', 'Free wall rupture', 'Dressler syndrome'], ans: 1, exp: 'VSR presents days 3–7 post-MI with harsh holosystolic murmur and O₂ step-up from RA to RV on right heart cath. More common in inferior and anterior MI.' },
+    { q: 'Which DAPT regimen is recommended post-primary PCI for STEMI in the absence of high bleeding risk?', opts: ['Aspirin alone for 6 months', 'Aspirin + clopidogrel for 1 month', 'Aspirin + ticagrelor or prasugrel for 12 months', 'Aspirin + warfarin for 6 months'], ans: 2, exp: 'Aspirin + potent P2Y12 inhibitor (ticagrelor or prasugrel preferred) for 12 months. PLATO and TRITON-TIMI 38 established superiority over clopidogrel.' },
+    { q: 'What is the target door-to-balloon time for primary PCI in STEMI from first medical contact?', opts: ['≤30 minutes', '≤60 minutes', '≤90 minutes', '≤120 minutes'], ans: 2, exp: '≤90 minutes from first medical contact. Each 30-minute delay increases 1-year mortality by ~7.5%. Pre-hospital ECG and direct cath lab activation are key.' },
+    { q: 'Which ECG finding in V1–V3 in a pain-free post-chest-pain patient represents a pre-infarction warning of critical proximal LAD stenosis?', opts: ['ST elevation ≥2mm', 'Wellens syndrome (biphasic or inverted T-waves)', 'Q waves in V1–V3', 'New LBBB'], ans: 1, exp: 'Wellens syndrome = biphasic (Type A) or deeply inverted (Type B) T-waves in V2–V3 after chest pain. It indicates critical proximal LAD stenosis. Stress testing is contraindicated — urgent catheterization is needed.' },
   ];
+  let qi = 0, score = 0, wrong = [], answered = false;
+  const body = document.getElementById('ret-body');
 
-  const idMap = {
-    retrieval:'ret', spacing:'sp', interleaving:'il',
-    generation:'gen', elaboration:'elab', reflection:'ref', difficulty:'dif'
+  function renderQ() {
+    answered = false;
+    const q = Qs[qi];
+    body.innerHTML = `
+      <div class="card">
+        <div class="section-label">Question ${qi+1} of ${Qs.length}</div>
+        <div class="progress-dots">${Qs.map((_,i) => `<span class="${i<qi?'done':i===qi?'now':''}"></span>`).join('')}</div>
+        <div class="qtext">${q.q}</div>
+        ${q.opts.map((o,i) => `<button class="choice" data-i="${i}">${o}</button>`).join('')}
+        <div class="feedback" id="rfb"></div>
+        <button class="btn" id="rnxt" style="display:none;margin-top:12px">${qi < Qs.length-1 ? 'Next question →' : 'See results →'}</button>
+      </div>`;
+    body.querySelectorAll('.choice').forEach(btn => btn.onclick = () => {
+      if (answered) return; answered = true;
+      const c = parseInt(btn.dataset.i);
+      body.querySelectorAll('.choice').forEach((b,i) => { if(i===q.ans) b.classList.add('correct'); else if(i===c&&c!==q.ans) b.classList.add('incorrect'); });
+      if (c===q.ans) { score++; logEvent('retrieval','correct',{qi}); } else { wrong.push(qi); logEvent('retrieval','incorrect',{qi}); }
+      STATE.learnerProfile.retrievalAccuracy = score/(qi+1);
+      const keys = Object.keys(STATE.conceptMastery);
+      if (qi < keys.length) STATE.conceptMastery[keys[qi]] = Math.min(1, STATE.conceptMastery[keys[qi]] + (c===q.ans ? 0.12 : -0.05));
+      const fb = body.querySelector('#rfb');
+      fb.className = 'feedback show ' + (c===q.ans ? 'success' : 'info');
+      fb.innerHTML = `<strong>${c===q.ans?'Correct':'Incorrect'}</strong> — ${q.exp}`;
+      body.querySelector('#rnxt').style.display = 'inline-block';
+    });
+    body.querySelector('#rnxt').onclick = () => { qi++; qi < Qs.length ? renderQ() : renderScore(); };
+  }
+
+  function renderScore() {
+    const pct = Math.round(score/Qs.length*100);
+    body.innerHTML = `<div class="card">
+      <div class="section-label">Session complete</div>
+      <div style="display:flex;align-items:center;gap:20px;padding:14px;background:var(--bg2);border-radius:var(--radius);margin-bottom:14px">
+        <div style="font-size:36px;font-weight:600;letter-spacing:-0.03em">${score}/${Qs.length}</div>
+        <div><div style="font-size:16px;font-weight:500">${pct}%</div><div class="stext">${pct>=83?'Strong — mastery threshold met':'Below 83% — flagged for spacing review'}</div></div>
+      </div>
+      ${wrong.length ? `<div class="section-label">Flagged for spaced review</div>${wrong.map(i=>`<div style="font-size:12px;color:var(--text2);padding:5px 0;border-bottom:0.5px solid var(--border)">${Qs[i].q.substring(0,85)}…</div>`).join('')}` : '<div class="feedback success show">All items marked as mastered.</div>'}
+      <div class="btn-row">
+        <button class="btn primary" onclick="qi=0;score=0;wrong=[];renderQ()">Retry</button>
+        <button class="btn" onclick="goTo('recommend')">See recommendations →</button>
+      </div>
+    </div>`;
+  }
+
+  renderQ();
+  window._retRenderQ = renderQ;
+})();
+
+// ═══════════════════════════════════════════════════════
+// AGENT 2 — SPACING
+// ═══════════════════════════════════════════════════════
+(function() {
+  const items = [
+    { name:'STEMI ECG criteria', reps:4, interval:14, daysAgo:15, base:82 },
+    { name:'Killip classification', reps:2, interval:6, daysAgo:7, base:65 },
+    { name:'Troponin kinetics', reps:5, interval:21, daysAgo:5, base:90 },
+    { name:'Door-to-balloon', reps:1, interval:3, daysAgo:4, base:40 },
+    { name:'Fibrinolysis indications', reps:3, interval:10, daysAgo:10, base:55 },
+    { name:'Post-MI complications', reps:2, interval:7, daysAgo:2, base:88 },
+    { name:'DAPT regimen', reps:1, interval:3, daysAgo:3, base:52 },
+    { name:'Cardiogenic shock Mx', reps:0, interval:1, daysAgo:0, base:0 },
+  ];
+  const QA = {
+    'STEMI ECG criteria': { q:'What ECG changes define STEMI and which leads indicate inferior, anterior, and lateral infarction?', a:'≥1mm STE in ≥2 contiguous limb leads or ≥2mm precordial. Inferior: II,III,aVF (RCA). Anterior: V1–V4 (LAD). Lateral: I,aVL,V5–V6 (LCx). Posterior: tall R in V1/V2 + ST depression.' },
+    'Door-to-balloon': { q:'What is the door-to-balloon target for primary PCI and what systems reduce delays?', a:'Target ≤90min from first medical contact. Each 30-min delay raises 1-year mortality ~7.5%. Systems: pre-hospital ECG transmission, direct cath lab activation before arrival, bypass of ED.' },
+    'Fibrinolysis indications': { q:'List the absolute contraindications to fibrinolysis in STEMI.', a:'Prior intracranial hemorrhage, known AVM, intracranial malignancy, ischemic stroke <3mo, significant head/facial trauma <3mo, active internal bleeding (not menses), suspected aortic dissection, intracranial surgery <2mo.' },
+    'default': { q:'Describe the key management priorities in the first 24 hours of STEMI.', a:'Aspirin + P2Y12 inhibitor, anticoagulation, reperfusion (primary PCI ≤90min or fibrinolysis), telemetry, echo. Medications: beta-blocker if stable, statin, ACE inhibitor. Avoid: NSAIDs, unnecessary delays.' },
   };
 
-  agents.forEach(a => {
-    const bodyId = (idMap[a.id] || a.id) + '-body';
-    const body = document.getElementById(bodyId);
-    if (!body) { console.warn('Agent body not found:', bodyId); return; }
+  const body = document.getElementById('sp-body');
+  let reviewing = null;
+
+  function ret(item) { return item.reps===0 ? 0 : Math.max(5, Math.round(item.base * Math.exp(-item.daysAgo/(item.interval*0.7)))); }
+  function status(item) {
+    if (item.reps===0) return 'new';
+    if (item.daysAgo >= item.interval) return 'due';
+    if (item.daysAgo >= item.interval*0.7) return 'soon';
+    return 'fresh';
+  }
+
+  function renderDash() {
+    const sorted = [...items].sort((a,b) => { const o={due:0,new:1,soon:2,fresh:3}; return o[status(a)]-o[status(b)]; });
+    const due = items.filter(i => status(i)==='due' || status(i)==='new');
+    STATE.agentStats.spacing.due = due.length;
     body.innerHTML = `
-      <div class="card" id="${a.id}-start">
-        <div class="sec">Agent ready · ${LEARNER?.topic || 'Healthcare Education'}</div>
-        <div style="font-size:13px;color:var(--text2);margin-bottom:14px">This agent will first read your learning history, then act. Each interaction is saved to your profile and updates your spaced repetition schedule.</div>
-        <button class="btn primary" onclick="startAgent('${a.id}')">Activate ${a.id} agent →</button>
+      <div class="stat-grid two">
+        <div class="stat-box"><div class="stat-num">${due.length}</div><div class="stat-lbl">due for review</div></div>
+        <div class="stat-box"><div class="stat-num">${items.filter(i=>status(i)==='fresh').length}</div><div class="stat-lbl">on track</div></div>
       </div>
-      <div id="${idMap[a.id]||a.id}-chat"></div>`;
-
-    window['startAgent_' + a.id + '_prompt'] = a.prompt;
-  });
-}
-
-async function startAgent(agentId) {
-  const prompt = window['startAgent_' + agentId + '_prompt'] || 'Begin the session.';
-  await sendToAgent(agentId, prompt, true);
-}
-
-const _idMap = {
-  retrieval:'ret', spacing:'sp', interleaving:'il',
-  generation:'gen', elaboration:'elab', reflection:'ref', difficulty:'dif'
-};
-
-async function sendToAgent(agentId, message, isFirst = false) {
-  const shortId = _idMap[agentId] || agentId;
-  const chat = document.getElementById(shortId + '-chat');
-  if (!chat) return;
-  if (isFirst) {
-    const startEl = document.getElementById(shortId + '-start');
-    if (startEl) startEl.style.display = 'none';
+      <div class="card">
+        <div class="section-label">Concept schedule — sorted by urgency</div>
+        ${sorted.map(item => {
+          const st = status(item), r = ret(item);
+          const col = {due:'#c0392b',soon:'#b45309',fresh:'#2a7a3b',new:'#185FA5'}[st];
+          const lbl = {due:'review now',soon:'due soon',fresh:'on track',new:'not started'}[st];
+          return `<div style="margin-bottom:13px">
+            <div class="flex-row-between" style="margin-bottom:4px">
+              <span style="font-size:13px;color:var(--text)">${item.name}</span>
+              <span style="font-size:10px;color:${col};border:0.5px solid ${col};padding:2px 8px;border-radius:20px">${lbl}</span>
+            </div>
+            <div class="flex-row" style="margin-bottom:2px">
+              <div class="bar-wrap"><div class="bar-fill" style="width:${r}%;background:${col}"></div></div>
+              <span class="stext" style="width:58px;text-align:right;flex-shrink:0">${item.reps===0?'new':r+'% ret.'}</span>
+            </div>
+            <div style="font-size:11px;color:var(--text3)">${item.reps===0?'Never reviewed':'Rep '+item.reps+' · interval '+item.interval+'d · '+item.daysAgo+'d ago'}</div>
+          </div>`;
+        }).join('')}
+      </div>
+      ${due.length ? `<button class="btn primary" onclick="startReview()">Start review session (${due.length} items)</button>` : '<div class="feedback success show">All items on schedule. Next session due tomorrow.</div>'}
+      <div class="card" style="margin-top:12px">
+        <div class="section-label">Spacing principle</div>
+        <div class="stext">SM-2 algorithm (Wozniak 1987): each review extends the interval based on recall quality (1–4 scale). Reviewing at the moment of near-forgetting (~70% retention) produces the largest memory consolidation per time invested — the spacing effect.</div>
+      </div>`;
+    window.startReview = () => { reviewing = { items: items.filter(i => status(i)==='due'||status(i)==='new'), idx: 0 }; renderReview(); logEvent('spacing','review_start',{}); };
   }
 
-  // Show user message if not first system call
-  if (!isFirst) {
-    chat.innerHTML += `<div class="card" style="margin-bottom:8px">
-      <div class="sec">Your answer</div>
-      <div style="font-size:13px;color:var(--text2);line-height:1.65">${message}</div>
+  function renderReview() {
+    const item = reviewing.items[reviewing.idx];
+    const qa = QA[item.name] || QA['default'];
+    body.innerHTML = `<div class="card">
+      <div class="section-label">Spaced review ${reviewing.idx+1}/${reviewing.items.length} · ${item.name}</div>
+      <div class="qtext">${qa.q}</div>
+      <textarea placeholder="Write everything you can recall before seeing the answer..."></textarea>
+      <button class="btn primary" style="margin-top:12px" id="sp-reveal">Reveal answer</button>
     </div>`;
-  }
-
-  const t = addThinking(chat, 'Agent reading your history and reasoning…');
-
-  try {
-    const res = await fetch(`/api/agent/${agentId}`, {
-      method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ learnerId: LEARNER.id, message, topic: LEARNER.topic })
-    });
-    const data = await res.json();
-    t.remove();
-
-    if (!res.ok) throw new Error(data.error || 'Agent error');
-
-    // Parse agent response — look for a question to respond to
-    const text = data.text;
-    const hasQuestion = text.includes('?');
-
-    chat.innerHTML += `<div class="card" style="margin-bottom:8px">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-        <div class="ai-label">Agent response · ${data.toolsUsed} tool call${data.toolsUsed!==1?'s':''}</div>
-        <span style="font-size:10px;color:var(--text3)">${LEARNER.topic}</span>
-      </div>
-      <div class="ai-response">${text}</div>
-      ${hasQuestion ? `
-        <div style="margin-top:14px">
-          <textarea id="ans-${agentId}-${Date.now()}" placeholder="Your answer…" style="min-height:100px"></textarea>
-          <div class="btn-row">
-            <button class="btn primary" onclick="submitAnswer('${agentId}', this)">Submit →</button>
-            <button class="btn" onclick="startAgent('${agentId}')">New question</button>
-          </div>
-        </div>` : `
+    document.getElementById('sp-reveal').onclick = () => {
+      body.innerHTML += `<div class="card">
+        <div class="section-label">Expert answer</div>
+        <div class="qtext" style="font-size:13px">${qa.a}</div>
+        <div style="font-size:13px;color:var(--text2);margin:12px 0 10px">Rate your recall — sets next interval (SM-2):</div>
         <div class="btn-row">
-          <button class="btn primary" onclick="startAgent('${agentId}')">Continue session →</button>
-        </div>`}
-    </div>`;
-
-    // Refresh dashboard stats silently
-    fetch(`/api/learner/${LEARNER.id}`).then(r=>r.json()).then(d=>{ STATS=d.stats; CONCEPTS=d.concepts||[]; }).catch(()=>{});
-  } catch(e) {
-    t.remove();
-    chat.innerHTML += `<div class="feedback show danger">Agent error: ${e.message}<br><button class="btn sm" style="margin-top:8px" onclick="startAgent('${agentId}')">Try again</button></div>`;
+          ${['Forgot (1d)','Partial (3d)','Good (7d)','Perfect (14d)'].map((l,i) => `<button class="btn" onclick="rateRecall(${i})">${l}</button>`).join('')}
+        </div>
+      </div>`;
+      window.rateRecall = score => {
+        const ivls = [1,3,7,14];
+        item.interval = ivls[score]; item.daysAgo = 0; item.reps++;
+        STATE.conceptMastery[item.name] = Math.min(1, (STATE.conceptMastery[item.name]||0.5) + (score>=2?0.08:0.02));
+        logEvent('spacing','review_rated',{item:item.name,score});
+        reviewing.idx++;
+        if (reviewing.idx < reviewing.items.length) renderReview();
+        else { body.innerHTML = `<div class="feedback success show">Session complete — ${reviewing.items.length} item${reviewing.items.length>1?'s':''} rescheduled.</div><div class="btn-row"><button class="btn" onclick="window._spRenderDash()">Back to schedule</button></div>`; }
+      };
+    };
   }
-}
-
-function submitAnswer(agentId, btn) {
-  // Find the textarea closest to this button
-  const card = btn.closest('.card');
-  const ta = card.querySelector('textarea');
-  if (!ta || !ta.value.trim()) return;
-  const answer = ta.value.trim();
-  ta.disabled = true;
-  btn.disabled = true;
-  sendToAgent(agentId, answer, false);
-}
+  window._spRenderDash = renderDash;
+  renderDash();
+})();
 
 // ═══════════════════════════════════════════════════════
-// UTILITIES
+// AGENT 3 — INTERLEAVING
 // ═══════════════════════════════════════════════════════
-function addThinking(container, msg) {
-  const el = document.createElement('div');
-  el.className = 'thinking';
-  el.innerHTML = `<div class="thinking-dots"><span></span><span></span><span></span></div><span>${msg}</span>`;
-  container.appendChild(el);
-  return el;
-}
+(function() {
+  const pool = [
+    { topic:'Pathophysiology', color:'#185FA5', q:'Why does transmural ischemia cause ST elevation rather than depression on the surface ECG?', exp:'Transmural ischemia affects the full myocardial wall, altering the injury current vector toward the epicardium. The epicardial surface becomes relatively positive, projecting STE toward overlying leads. Subendocardial ischemia (partial-thickness) projects toward the endocardium → ST depression.' },
+    { topic:'Pharmacology', color:'#0F6E56', q:'Explain the mechanism by which aspirin irreversibly inhibits platelet aggregation in acute MI.', exp:'Aspirin acetylates COX-1 irreversibly, blocking thromboxane A2 (TXA2) synthesis. TXA2 is a potent platelet activator and vasoconstrictor. Platelets lack nuclei, so cannot synthesize new COX-1 — inhibition lasts the platelet lifespan (7–10 days). 81mg/day is sufficient; higher doses add GI risk without additional antiplatelet benefit.' },
+    { topic:'ECG interpretation', color:'#854F0B', q:'A patient with new LBBB presents with chest pain. What criteria help identify superimposed STEMI?', exp:'Sgarbossa criteria: (1) STE ≥1mm concordant with QRS — most specific; (2) STD ≥1mm in V1–V3 — concordant; (3) STE ≥5mm discordant — sensitive but less specific. Smith-modified Sgarbossa replaces criterion 3 with STE/S-wave ratio ≥0.25, improving sensitivity.' },
+    { topic:'Clinical management', color:'#993556', q:'STEMI patient develops hypotension, elevated JVP, and clear lung fields 4 hours after presentation. Diagnosis and management?', exp:'Right ventricular infarction complicating inferior STEMI (proximal RCA occlusion). Management: avoid nitrates and diuretics (preload-dependent), volume challenge with normal saline, maintain sinus rhythm, treat AV block with atropine/pacing. Reperfusion of the culprit lesion is definitive.' },
+    { topic:'Pathophysiology', color:'#185FA5', q:'Describe the wavefront phenomenon in myocardial infarction and its clinical implications.', exp:'Reimer (1977): ischemic necrosis begins at the subendocardium (lowest perfusion, highest O₂ demand) and propagates outward toward the epicardium over 3–6 hours. Clinical implication: reperfusion within 3h salvages significant myocardium; benefit diminishes thereafter. This is the mechanistic basis of "time is muscle."' },
+    { topic:'Pharmacology', color:'#0F6E56', q:'Why are beta-blockers contraindicated in MI complicated by cardiogenic shock?', exp:'Beta-blockers reduce HR and contractility via β1 blockade. In cardiogenic shock, CO is already critically reduced — further reduction worsens end-organ perfusion. Positive inotropes (dobutamine) and vasopressors (norepinephrine) are the pharmacological backbone in cardiogenic shock. Beta-blockers are used in stable post-MI patients only.' },
+    { topic:'ECG interpretation', color:'#854F0B', q:'What is Wellens syndrome and why is it a cardiology emergency?', exp:'Wellens syndrome: biphasic (Type A) or deeply inverted (Type B) T-waves in V2–V3 in a pain-free state after recent chest pain. Represents critical proximal LAD stenosis with spontaneous reperfusion — not infarction. Pre-infarction warning. Stress testing is absolutely contraindicated. Urgent catheterization is required.' },
+    { topic:'Clinical management', color:'#993556', q:'Which post-MI patient should receive an ICD, and which should wait 40 days?', exp:'ICD before discharge: sustained VT/VF >48h post-MI not due to reversible cause. Wait 40 days: new STEMI with EF<35% but no sustained arrhythmia — EF often recovers with revascularization and GDMT. DINAMIT/IRIS trials showed no benefit and possible harm from early ICD implantation post-MI.' },
+  ];
+
+  const body = document.getElementById('il-body');
+  let queue = [...pool].sort(() => Math.random()-.5), done = [], current = null;
+
+  function nextQ() {
+    if (!queue.length) { showSum(); return; }
+    current = queue.shift();
+    body.innerHTML = `<div class="card">
+      <div class="section-label">Interleaved session · ${queue.length+1} remaining · domain hidden</div>
+      <div class="feedback info show" style="margin-bottom:14px">Identify which MI domain this question belongs to before answering. Domain revealed after you submit.</div>
+      <div class="qtext">${current.q}</div>
+      <textarea placeholder="Your answer — identify the domain: Pathophysiology / Pharmacology / ECG interpretation / Clinical management..."></textarea>
+      <div class="btn-row">
+        <button class="btn primary" onclick="revealIL()">Submit & reveal domain</button>
+        <button class="btn" onclick="ilSkip()">Skip</button>
+      </div>
+    </div>`;
+    window.ilSkip = () => { queue.push(current); nextQ(); };
+    window.revealIL = () => {
+      const c = current; done.push(c);
+      logEvent('interleaving','interleave_reveal',{topic:c.topic});
+      body.innerHTML = `<div class="card">
+        <div style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:500;background:${c.color}20;color:${c.color};margin-bottom:10px">Domain: ${c.topic}</div>
+        <div class="qtext">${c.q}</div>
+        <div style="border-top:0.5px solid var(--border);padding-top:12px;margin-top:4px"><div class="section-label">Expert explanation</div><div class="stext" style="font-size:13px;color:var(--text)">${c.exp}</div></div>
+        <button class="btn primary" style="margin-top:14px" onclick="window._ilNextQ()">Next question →</button>
+      </div>`;
+    };
+  }
+
+  function showSum() {
+    const topics = [...new Set(done.map(q=>q.topic))];
+    body.innerHTML = `<div class="card">
+      <div class="section-label">Interleaving session complete</div>
+      <div style="display:flex;align-items:center;gap:20px;padding:14px;background:var(--bg2);border-radius:var(--radius);margin-bottom:14px">
+        <div style="font-size:36px;font-weight:600">${done.length}</div>
+        <div class="stext">questions across ${topics.length} domains<br>Mixing builds discrimination and transfer to clinical contexts</div>
+      </div>
+      ${topics.map(t=>{const col=pool.find(p=>p.topic===t)?.color||'#888';return`<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><div class="nav-dot" style="background:${col}"></div><span style="font-size:13px;color:var(--text)">${t}</span><span class="stext">${done.filter(q=>q.topic===t).length} q</span></div>`;}).join('')}
+      <button class="btn" style="margin-top:10px" onclick="window._ilRestart()">Reshuffle &amp; restart</button>
+    </div>`;
+  }
+
+  window._ilNextQ = nextQ;
+  window._ilRestart = () => { queue = [...pool].sort(() => Math.random()-.5); done = []; nextQ(); };
+  nextQ();
+})();
+
+// ═══════════════════════════════════════════════════════
+// AGENT 4 — REFLECTION
+// ═══════════════════════════════════════════════════════
+(function() {
+  const frameworks = [
+    { label:'Calibration', icon:'◎', theory:'Metacognitive accuracy — Dunning-Kruger / Flavell 1979', prompt:'Before this session, how confident were you in your MI knowledge (1–10)? After answering, which specific questions revealed a gap between your confidence and your actual accuracy?', followup:'Describe one assumption about MI management you held before today that was corrected or refined.' },
+    { label:'Error analysis', icon:'△', theory:'Error-driven learning — Butterfield & Metcalfe 2001', prompt:'Choose the question where you performed worst. What reasoning path led to the wrong answer? Was it a knowledge gap, a recall failure, or a reasoning error (confusing similar concepts)?', followup:'How will you approach this concept differently the next time you encounter it clinically?' },
+    { label:'Connection', icon:'⟡', theory:'Depth-of-processing — Craik & Lockhart 1972', prompt:'Connect one concept from today\'s MI session to a different domain you already know (pharmacology, physiology, pathology, or a prior patient encounter). Be explicit about the structural similarity.', followup:'Does this connection change how you understand either concept?' },
+    { label:'Transfer', icon:'→', theory:'Transfer-appropriate processing — Morris et al. 1977', prompt:'Construct a clinical scenario (real or imagined) where you would need to apply today\'s MI learning. Walk through your clinical reasoning step by step.', followup:'What knowledge gaps would you need to fill before managing this case confidently?' },
+    { label:'Goals', icon:'◈', theory:'Self-regulated learning — Zimmerman 2000', prompt:'Based on today\'s session, identify the two concepts you most need to strengthen. For each, specify the action you will take before your next session.', followup:'How will you know when you have achieved sufficient mastery in these areas?' },
+  ];
+
+  const body = document.getElementById('ref-body');
+  const journal = [];
+  let activeF = 0;
+
+  function renderReflect() {
+    const f = frameworks[activeF];
+    body.innerHTML = `
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">
+        ${frameworks.map((fr,i)=>`<button class="btn sm${i===activeF?' primary':''}" onclick="switchF(${i})">${fr.icon} ${fr.label}</button>`).join('')}
+      </div>
+      <div class="card">
+        <div class="section-label">${f.label} · <span style="font-style:italic">${f.theory}</span></div>
+        <div style="font-style:italic;font-size:14px;color:var(--text);line-height:1.7;margin-bottom:12px">"${f.prompt}"</div>
+        <textarea id="r1" placeholder="Primary reflection..." style="min-height:100px"></textarea>
+        <div style="font-style:italic;font-size:13px;color:var(--text2);margin:12px 0 8px">"${f.followup}"</div>
+        <textarea id="r2" placeholder="Follow-up..." style="min-height:68px"></textarea>
+        <button class="btn primary" style="margin-top:12px" onclick="saveRefl()">Save to journal</button>
+      </div>
+      ${journal.length ? `<div class="card">
+        <div class="section-label">Reflection journal (${journal.length} entries)</div>
+        ${journal.slice(-4).reverse().map(e=>`<div style="padding:8px 0;border-bottom:0.5px solid var(--border)">
+          <div style="font-size:10px;color:var(--text3);margin-bottom:3px">${e.framework} · ${e.time}</div>
+          <div style="font-size:13px;color:var(--text)">${e.text.substring(0,120)}${e.text.length>120?'…':''}</div>
+        </div>`).join('')}
+      </div>` : ''}
+      <div class="card">
+        <div class="section-label">Reflection principle</div>
+        <div class="stext">${['Accurate self-assessment enables calibrated study — learners who overestimate performance under-invest in weak areas (Dunning-Kruger effect).','Incorrect responses activate stronger error-correction encoding when followed by corrective feedback than correct responses do.','Facts connected to rich semantic networks are retrieved more easily and transferred to new contexts (depth-of-processing theory).','Encoding in a context similar to retrieval context (clinical scenario) improves real-world transfer of knowledge.','Goal-setting and self-monitoring are the two highest-leverage metacognitive strategies for long-term academic performance.'][activeF]}</div>
+      </div>`;
+    window.switchF = i => { activeF=i; renderReflect(); };
+    window.saveRefl = () => {
+      const r1 = document.getElementById('r1')?.value||'';
+      const r2 = document.getElementById('r2')?.value||'';
+      if (!r1.trim()) return;
+      journal.push({framework:f.label,text:r1+(r2?' | '+r2:''),time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})});
+      STATE.learnerProfile.reflectionEngagement = Math.min(1, STATE.learnerProfile.reflectionEngagement + 0.12);
+      logEvent('reflection','reflection_saved',{framework:f.label});
+      renderReflect();
+    };
+  }
+
+  renderReflect();
+})();
+
+// ═══════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════
+renderDashboard();
+renderRecommend();
 </script>
 </body>
 </html>

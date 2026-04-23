@@ -250,33 +250,6 @@ Your agentic loop:
 6. CALL flag_weak_concept if the domain identification was wrong (means discrimination failed)
 7. Explain why this question belongs to that domain — the pedagogical insight`,
 
-    generation: `${base}
-
-You are the Generation Agent (Generation Effect — Slamecka & Graf 1978).
-Your agentic loop:
-1. CALL get_learner_history to see what gaps have been identified before
-2. CALL get_learner_stats to understand current level
-3. Select a concept the learner has NOT recently generated about, or one where gaps were found
-4. Present a generation cue (NOT the answer)
-5. After generation: compare to expert knowledge, identify SPECIFIC gaps
-6. CALL save_answer with identified gaps
-7. CALL flag_weak_concept for the most critical gap
-8. CALL schedule_review to schedule the concept
-9. Ask a targeted consolidation question about the most important gap`,
-
-    elaboration: `${base}
-
-You are the Elaboration Agent (Elaborative Interrogation — Pressley et al. 1992).
-Your agentic loop:
-1. CALL get_learner_history to understand current depth of knowledge
-2. Start with a clinical-level why/how question
-3. Read the learner's elaboration and DECIDE: deeper, redirect, or consolidate
-4. CALL save_answer after each exchange
-5. If going deeper: generate the next mechanistic question
-6. If redirecting: address the misconception, then re-probe
-7. If consolidating: CALL schedule_review for this concept
-8. Build a Socratic path through 3 levels: Clinical → Physiological → Molecular`,
-
     reflection: `${base}
 
 You are the Reflection Agent (Metacognitive Reflection — Schön 1983 / Flavell 1979).
@@ -289,23 +262,9 @@ Your agentic loop:
 6. CALL flag_weak_concept for any blind spot that reveals a critical knowledge gap
 7. Generate a Socratic follow-up that challenges the most significant blind spot
 This agent is evidence-based — reflections are grounded in actual performance data.`,
-
-    difficulty: `${base}
-
-You are the Difficulty Agent (Desirable Difficulties — Bjork 1994).
-Your agentic loop:
-1. CALL get_learner_stats to calibrate starting difficulty
-2. CALL get_learner_history to see recent performance trajectory
-3. Select difficulty level (1-4) targeting 60-70% success rate based on recent scores
-4. Generate a question at the selected difficulty
-5. After answer: score it (0-100)
-6. CALL save_answer
-7. Autonomously decide: escalate (score>75), hold (50-75), reduce (score<50)
-8. Explain decision and preview next question level
-Target: keep learner in the productive difficulty zone — never too easy, never frustrating.`,
   };
 
-  prompts.orchestrator = `You are the orchestrator of a 7-agent learning system for healthcare education on ${topic}. The agents are: Retrieval (testing effect), Spacing (forgetting curve/SM-2), Interleaving (discrimination learning), Generation (generation effect), Elaboration (elaborative interrogation), Reflection (metacognition/Schon), Difficulty (desirable difficulties/Bjork). Given a learner profile, rank all 7 agents by current learning need and give a 1-sentence rationale for each. Return ONLY valid JSON, no other text: {"rankings":[{"agent":"Retrieval","urgency":"high|medium|low","rationale":"one sentence reason"},{"agent":"Spacing","urgency":"...","rationale":"..."},{"agent":"Interleaving","urgency":"...","rationale":"..."},{"agent":"Generation","urgency":"...","rationale":"..."},{"agent":"Elaboration","urgency":"...","rationale":"..."},{"agent":"Reflection","urgency":"...","rationale":"..."},{"agent":"Difficulty","urgency":"...","rationale":"..."}]}`;
+  prompts.orchestrator = `You are the orchestrator of a 4-agent learning system for healthcare education on ${topic}. The agents are: Retrieval (testing effect), Spacing (forgetting curve/SM-2), Interleaving (discrimination learning), Reflection (metacognition/Schon). Given a learner profile, rank all 4 agents by current learning need and give a 1-sentence rationale for each. Return ONLY valid JSON, no other text: {"rankings":[{"agent":"Retrieval","urgency":"high|medium|low","rationale":"one sentence reason"},{"agent":"Spacing","urgency":"...","rationale":"..."},{"agent":"Interleaving","urgency":"...","rationale":"..."},{"agent":"Reflection","urgency":"...","rationale":"..."}]}`;
 
   return prompts[agent] || base;
 }
