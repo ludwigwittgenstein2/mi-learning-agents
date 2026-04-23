@@ -1,27 +1,36 @@
-const nodemailer = require('nodemailer');
-
-// Uses Resend.com SMTP — free tier: 100 emails/day, 3000/month
-// Sign up at resend.com, get API key, use as SMTP password
-const transporter = nodemailer.createTransport({
-  host: 'smtp.resend.com',
-  port: 465,
-  secure: true,
-  auth: {
-    user: 'resend',
-    pass: process.env.RESEND_API_KEY || '',
-  },
-});
+// Uses Resend HTTP API (not SMTP) — works on all hosting platforms
+// Free tier: 100 emails/day, 3000/month — resend.com
 
 const BASE_URL = process.env.BASE_URL || 'https://mi-learning-agents-production.up.railway.app';
 const FROM_EMAIL = process.env.FROM_EMAIL || 'onboarding@resend.dev';
+const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
 
-// ── Spaced repetition reminder ───────────────────────────
-async function sendSpacingReminder(learner, dueConcepts, learnerId) {
-  if (!process.env.RESEND_API_KEY) {
-    console.log(`[EMAIL SKIPPED] Would send reminder to ${learner.email} for: ${dueConcepts.join(', ')}`);
+async function sendEmail(to, subject, html) {
+  if (!RESEND_API_KEY) {
+    console.log(`[EMAIL SKIPPED] No RESEND_API_KEY — would send to ${to}`);
     return false;
   }
 
+  const response = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${RESEND_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ from: `MI Learning Agents <${FROM_EMAIL}>`, to, subject, html }),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || JSON.stringify(data));
+  }
+
+  return data;
+}
+
+// ── Spaced repetition reminder ───────────────────────────
+async function sendSpacingReminder(learner, dueConcepts, learnerId) {
   const conceptList = dueConcepts.map(c => `<li style="padding:4px 0;color:#e0ddd8">${c}</li>`).join('');
   const reviewUrl = `${BASE_URL}?learner=${learnerId}&agent=spacing`;
 
@@ -70,27 +79,21 @@ async function sendSpacingReminder(learner, dueConcepts, learnerId) {
 </html>`;
 
   try {
-    await transporter.sendMail({
-      from: `MI Learning Agents <${FROM_EMAIL}>`,
-      to: learner.email,
-      subject: `Review due: ${dueConcepts.length} concept${dueConcepts.length > 1 ? 's' : ''} · ${learner.topic || 'Healthcare Education'}`,
-      html,
-    });
+    await sendEmail(
+      learner.email,
+      `Review due: ${dueConcepts.length} concept${dueConcepts.length > 1 ? 's' : ''} · ${learner.topic || 'Healthcare Education'}`,
+      html
+    );
     console.log(`✓ Reminder sent to ${learner.email}`);
     return true;
   } catch (err) {
-    console.error(`✗ Email failed for ${learner.email}:`, err.message);
+    console.error(`✗ Reminder failed for ${learner.email}:`, err.message);
     return false;
   }
 }
 
 // ── Welcome email ────────────────────────────────────────
 async function sendWelcomeEmail(learner) {
-  if (!process.env.RESEND_API_KEY) {
-    console.log(`[EMAIL SKIPPED] Would send welcome to ${learner.email}`);
-    return;
-  }
-
   const appUrl = `${BASE_URL}?learner=${learner.id}`;
 
   const html = `
@@ -134,12 +137,7 @@ async function sendWelcomeEmail(learner) {
 </html>`;
 
   try {
-    await transporter.sendMail({
-      from: `MI Learning Agents <${FROM_EMAIL}>`,
-      to: learner.email,
-      subject: 'Welcome to MI Learning Agents',
-      html,
-    });
+    await sendEmail(learner.email, 'Welcome to MI Learning Agents', html);
     console.log(`✓ Welcome email sent to ${learner.email}`);
   } catch (err) {
     console.error(`✗ Welcome email failed:`, err.message);
