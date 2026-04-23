@@ -12,8 +12,8 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-const BASE_URL = process.env.BASE_URL || 'http://localhost:3000';
-const FROM_EMAIL = process.env.FROM_EMAIL || 'learning@yourdomain.com';
+const BASE_URL = process.env.BASE_URL || 'https://mi-learning-agents-production.up.railway.app';
+const FROM_EMAIL = process.env.FROM_EMAIL || 'onboarding@resend.dev';
 
 // ── Spaced repetition reminder ───────────────────────────
 async function sendSpacingReminder(learner, dueConcepts, learnerId) {
@@ -104,17 +104,17 @@ async function sendWelcomeEmail(learner) {
     </div>
 
     <div style="font-size:13px;color:#9a9690;line-height:1.7;margin-bottom:24px">
-      Your learning profile has been created. You now have access to 7 theory-grounded
+      Your learning profile has been created. You now have access to 4 theory-grounded
       AI agents for healthcare education, each implementing a validated learning science mechanism.
     </div>
 
     <div style="background:#1e1e1e;border-radius:8px;padding:16px 18px;margin-bottom:24px">
-      <div style="font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:#5a5652;margin-bottom:12px">Your 7 agents</div>
+      <div style="font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:#5a5652;margin-bottom:12px">Your 4 agents</div>
       ${[
-        ['Retrieval','Testing Effect'],['Spacing','Forgetting Curve'],
-        ['Interleaving','Discrimination Learning'],['Generation','Generation Effect'],
-        ['Elaboration','Elaborative Interrogation'],['Reflection','Metacognition'],
-        ['Difficulty','Desirable Difficulties']
+        ['Retrieval',    'Testing Effect'],
+        ['Spacing',      'Forgetting Curve'],
+        ['Interleaving', 'Discrimination Learning'],
+        ['Reflection',   'Metacognition'],
       ].map(([a,t]) => `<div style="padding:5px 0;border-bottom:0.5px solid rgba(255,255,255,0.06);font-size:12px;color:#e0ddd8">${a} <span style="color:#5a5652">· ${t}</span></div>`).join('')}
     </div>
 
