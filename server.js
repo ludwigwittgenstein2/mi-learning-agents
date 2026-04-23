@@ -116,8 +116,8 @@ app.post('/api/learner/login', async (req, res) => {
       return res.status(400).json({ error: 'API key validation failed: ' + e.message });
     }
 
-    // Update stored API key for this session
-    await db.pool.query('UPDATE learners SET api_key = $1 WHERE id = $2', [apiKey, learner.id]);
+    // Update stored API key — must go through db to encrypt it properly
+    await db.createLearner(learner.email, learner.name, apiKey, learner.topic);
 
     const stats    = await db.getLearnerStats(learner.id);
     const concepts = await db.getConcepts(learner.id);
