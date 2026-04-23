@@ -259,7 +259,18 @@
 
     <div class="sidebar-footer">
       <div id="sidebar-user" style="margin-bottom:8px;font-size:12px;color:var(--text2)"></div>
-      Topic: Myocardial Infarction<br>
+      <div style="margin-bottom:6px">
+        <div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px">Topic</div>
+        <div id="sidebar-topic" style="font-size:12px;color:var(--text);font-weight:500;margin-bottom:4px">Myocardial Infarction</div>
+        <div id="topic-edit-area" style="display:none">
+          <input id="topic-input" type="text" style="width:100%;padding:5px 8px;font-size:12px;border:0.5px solid var(--border2);border-radius:6px;background:var(--bg);color:var(--text);font-family:var(--font);margin-bottom:4px" placeholder="Enter topic..." />
+          <div style="display:flex;gap:4px">
+            <button class="btn xs primary" onclick="saveTopic()">Save</button>
+            <button class="btn xs" onclick="cancelTopicEdit()">Cancel</button>
+          </div>
+        </div>
+        <button class="btn xs" id="topic-change-btn" onclick="startTopicEdit()" style="font-size:10px;padding:2px 8px">Change topic</button>
+      </div>
       Cleveland Clinic · AI in Education<br>
       Rejeleene &amp; Mehta, 2026
     </div>
@@ -1019,6 +1030,8 @@ function enterApp(learner) {
   document.getElementById('app-shell').style.display = 'flex';
   const userEl = document.getElementById('sidebar-user');
   if (userEl) userEl.textContent = `👤 ${learner.name.split(' ')[0]}`;
+  const topicEl = document.getElementById('sidebar-topic');
+  if (topicEl) topicEl.textContent = learner.topic || 'Myocardial Infarction';
   // Update URL without reload
   const url = new URL(window.location);
   url.searchParams.set('learner', learner.id);
@@ -1026,6 +1039,44 @@ function enterApp(learner) {
   renderDashboard();
   renderRecommend();
 }
+
+function startTopicEdit() {
+  const current = document.getElementById('sidebar-topic').textContent;
+  document.getElementById('topic-input').value = current;
+  document.getElementById('topic-edit-area').style.display = 'block';
+  document.getElementById('topic-change-btn').style.display = 'none';
+  document.getElementById('topic-input').focus();
+}
+
+function cancelTopicEdit() {
+  document.getElementById('topic-edit-area').style.display = 'none';
+  document.getElementById('topic-change-btn').style.display = 'inline-flex';
+}
+
+async function saveTopic() {
+  const newTopic = document.getElementById('topic-input').value.trim();
+  if (!newTopic || !LEARNER) return;
+  try {
+    await fetch(`${API}/api/learner/${LEARNER.id}/topic`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ topic: newTopic }),
+    });
+    LEARNER.topic = newTopic;
+    localStorage.setItem('mi_learner', JSON.stringify(LEARNER));
+    document.getElementById('sidebar-topic').textContent = newTopic;
+    cancelTopicEdit();
+    renderDashboard();
+    renderRecommend();
+  } catch (err) {
+    console.error('Topic update failed:', err);
+  }
+}
+
+document.getElementById('topic-input')?.addEventListener('keydown', e => {
+  if (e.key === 'Enter') saveTopic();
+  if (e.key === 'Escape') cancelTopicEdit();
+});
 
 function doLogout() {
   LEARNER = null;
