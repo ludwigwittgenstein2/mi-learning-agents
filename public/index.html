@@ -546,7 +546,7 @@ async function applyTopic(topic) {
   if (!LEARNER) return;
   LEARNER.topic = topic;
   localStorage.setItem('mi_learner', JSON.stringify(LEARNER));
-  document.getElementById('sidebar-topic').textContent = topic;
+  document.getElementById('sidebar-topic').textContent = topic + ' ↗';
   try {
     await fetch(`${API}/api/learner/${LEARNER.id}/topic`, {
       method: 'PATCH',
@@ -554,6 +554,11 @@ async function applyTopic(topic) {
       body: JSON.stringify({ topic }),
     });
   } catch(e) { console.error('Topic update failed:', e); }
+  // Reset agent panels so they reload with new topic
+  ['ret-body','sp-body','il-body','ref-body'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = '';
+  });
   renderRecommend();
   renderDashboard();
 }
@@ -608,8 +613,285 @@ document.head.appendChild(spinStyle);
 // ═══════════════════════════════════════════════════════
 // AGENT 1 — RETRIEVAL (dynamic)
 // ═══════════════════════════════════════════════════════
-(function() {
-  const body = document.getElementById('ret-body');
+function initRetrieval() {
+  let questionCount = 0, correctCount = 0, waitingForAnswer = false;
+
+  function body() { return document.getElementById('ret-body'); }
+
+  async function startSession() {
+    questionCount = 0; correctCount = 0; waitingForAnswer = false;
+    body().innerHTML = loadingCard(`Generating ${LEARNER?.topic || 'clinical'} question via Claude…`);
+    try {
+      const data = await callAgent('retrieval', `Start a new retrieval practice session. Generate one high-quality multiple-choice question about ${LEARNER?.topic || 'Myocardial Infarction'}. Present the question and 4 options labeled A, B, C, D. Do not reveal the answer yet.`);
+      renderQuestion(data.text);
+    } catch(e) {
+      body().innerHTML = `<div class="feedback danger show">Error: ${e.message}</div><button class="btn" onclick="window._retStart()" style="margin-top:10px">Retry</button>`;
+    }
+  }
+
+  function renderQuestion(questionText) {
+    waitingForAnswer = true; questionCount++;
+    body().innerHTML = `
+      <div class="card">
+        <div class="section-label">Question ${questionCount} · ${LEARNER?.topic} · Retrieval agent</div>
+        <div class="qtext">${questionText.replace(/\n/g,'<br>')}</div>
+        <div style="margin-top:4px">
+          ${['A','B','C','D'].map(opt => `<button class="choice" onclick="window._retSubmit('${opt}')">${opt}</button>`).join('')}
+        </div>
+        <div style="margin-top:10px">
+          <textarea id="ret-free" placeholder="Or write your own answer before selecting..." style="min-height:60px"></textarea>
+          <button class="btn" style="margin-top:6px" onclick="window._retFree()">Submit written answer</button>
+        </div>
+      </div>`;
+    window._retSubmit = opt => submitToAgent(`My answer is ${opt}.`);
+    window._retFree = () => { const v = document.getElementById('ret-free')?.value.trim(); if(v) submitToAgent(v); };
+  }
+
+  async function submitToAgent(answer) {
+    if (!waitingForAnswer) return; waitingForAnswer = false;
+    body().innerHTML += loadingCard('Assessing your answer…');
+    try {
+      const data = await callAgent('retrieval', answer);
+      const isCorrect = /correct|well done|right|excellent|accurate/i.test(data.text) && !/incorrect|wrong|not quite|unfortunately/i.test(data.text);
+      if (isCorrect) { correctCount++; logEvent('retrieval','correct',{}); } else { logEvent('retrieval','incorrect',{}); }
+      STATE.learnerProfile.retrievalAccuracy = correctCount / Math.max(1,questionCount);
+      body().innerHTML = agentResponseCard(data.text, '#185FA5') + `
+        <div class="btn-row">
+          <button class="btn primary" onclick="window._retNext()">Next question →</button>
+          <button class="btn" onclick="window._retSummary()">End session</button>
+        </div>`;
+    } catch(e) { body().innerHTML = `<div class="feedback danger show">Error: ${e.message}</div>`; }
+  }
+
+  window._retStart = startSession;
+  window._retNext = async () => {
+    body().innerHTML = loadingCard('Generating next question…');
+    try {
+      const data = await callAgent('retrieval', `Generate the next multiple-choice question about ${LEARNER?.topic}. Pick a different concept. Present 4 options A, B, C, D. Do not reveal the answer.`);
+      renderQuestion(data.text);
+    } catch(e) { body().innerHTML = `<div class="feedback danger show">Error: ${e.message}</div>`; }
+  };
+  window._retSummary = () => {
+    const pct = questionCount > 0 ? Math.round(correctCount/questionCount*100) : 0;
+    body().innerHTML = `<div class="card">
+      <div class="section-label">Session complete · ${LEARNER?.topic}</div>
+      <div style="display:flex;align-items:center;gap:20px;padding:14px;background:var(--bg2);border-radius:var(--radius);margin-bottom:14px">
+        <div style="font-size:36px;font-weight:600;letter-spacing:-0.03em">${correctCount}/${questionCount}</div>
+        <div><div style="font-size:16px;font-weight:500">${pct}%</div>
+        <div class="stext">${pct>=83?'Strong — mastery threshold met':'Below 83% — review flagged'}</div></div>
+      </div>
+      <div class="btn-row">
+        <button class="btn primary" onclick="window._retStart()">New session</button>
+        <button class="btn" onclick="goTo('recommend')">Recommendations →</button>
+      </div></div>`;
+  };
+
+  document.querySelector('[data-panel="retrieval"]').addEventListener('click', () => {
+    if (!body().innerHTML.trim()) startSession();
+  });
+  startSession();
+}
+
+// ═══════════════════════════════════════════════════════
+// AGENT 2 — SPACING (dynamic)
+// ═══════════════════════════════════════════════════════
+function initSpacing() {
+  function body() { return document.getElementById('sp-body'); }
+
+  async function startSpacing() {
+    body().innerHTML = loadingCard('Checking your spacing schedule via Claude…');
+    try {
+      const data = await callAgent('spacing', `Check what concepts are due for spaced repetition review for this learner on the topic of ${LEARNER?.topic || 'Myocardial Infarction'}. If concepts are due, present the first one for recall practice. If none are due, tell the learner their schedule and when to return.`);
+      renderSpacingResponse(data.text);
+    } catch(e) {
+      body().innerHTML = `<div class="feedback danger show">Error: ${e.message}</div><button class="btn" onclick="window._spStart()" style="margin-top:10px">Retry</button>`;
+    }
+  }
+
+  function renderSpacingResponse(text) {
+    body().innerHTML = agentResponseCard(text, '#0F6E56') + `
+      <div class="card" style="margin-top:0">
+        <div class="section-label">Your recall</div>
+        <textarea id="sp-ans" placeholder="Write everything you can recall about this concept before rating…" style="min-height:100px"></textarea>
+        <div class="btn-row" style="margin-top:10px">
+          ${['Forgot','Partial','Good','Perfect'].map((l,i) => `<button class="btn" onclick="window._spRate(${i},'${l}')">${l}</button>`).join('')}
+        </div>
+      </div>`;
+    window._spRate = async (score, label) => {
+      const ans = document.getElementById('sp-ans')?.value || '';
+      body().innerHTML += loadingCard('Saving recall rating…');
+      try {
+        const data = await callAgent('spacing', `The learner rated their recall as "${label}" (score ${score}/3). Written recall: "${ans}". Schedule next review via SM-2, give feedback, present next due concept if any.`);
+        logEvent('spacing','review_rated',{score});
+        body().innerHTML = agentResponseCard(data.text, '#0F6E56') + `
+          <div class="btn-row">
+            <button class="btn primary" onclick="window._spContinue()">Continue →</button>
+            <button class="btn" onclick="window._spStart()">Restart</button>
+          </div>`;
+        window._spContinue = () => {
+          body().innerHTML = loadingCard('Loading next due concept…');
+          callAgent('spacing','Continue to the next due concept, or confirm all done.').then(d => renderSpacingResponse(d.text)).catch(e => { body().innerHTML = `<div class="feedback danger show">${e.message}</div>`; });
+        };
+      } catch(e) { body().innerHTML = `<div class="feedback danger show">Error: ${e.message}</div>`; }
+    };
+  }
+
+  window._spStart = startSpacing;
+  document.querySelector('[data-panel="spacing"]').addEventListener('click', () => {
+    if (!body().innerHTML.trim()) startSpacing();
+  });
+  startSpacing();
+}
+
+// ═══════════════════════════════════════════════════════
+// AGENT 3 — INTERLEAVING (dynamic)
+// ═══════════════════════════════════════════════════════
+function initInterleaving() {
+  let done = 0;
+  function body() { return document.getElementById('il-body'); }
+
+  async function startInterleaving() {
+    done = 0;
+    body().innerHTML = loadingCard('Generating interleaved question across domains…');
+    try {
+      const data = await callAgent('interleaving', `Start an interleaved practice session for "${LEARNER?.topic}". Randomly pick one domain: Pathophysiology, Pharmacology, Diagnosis, or Clinical Management. Generate a question WITHOUT revealing the domain. Tell the learner to identify the domain before answering.`);
+      renderILQuestion(data.text);
+    } catch(e) {
+      body().innerHTML = `<div class="feedback danger show">Error: ${e.message}</div><button class="btn" onclick="window._ilStart()" style="margin-top:10px">Retry</button>`;
+    }
+  }
+
+  function renderILQuestion(text) {
+    body().innerHTML = `
+      <div class="card">
+        <div class="section-label">Interleaved · question ${done+1} · domain hidden · ${LEARNER?.topic}</div>
+        <div class="feedback info show" style="margin-bottom:14px">Identify the domain (Pathophysiology / Pharmacology / Diagnosis / Clinical Management) before answering.</div>
+        <div class="qtext">${text.replace(/\n/g,'<br>')}</div>
+        <textarea id="il-ans" placeholder="State the domain, then write your answer…" style="min-height:100px"></textarea>
+        <div class="btn-row">
+          <button class="btn primary" onclick="window._ilSubmit()">Submit &amp; reveal domain</button>
+          <button class="btn" onclick="window._ilSkip()">Skip</button>
+        </div>
+      </div>`;
+    window._ilSubmit = async () => {
+      const ans = document.getElementById('il-ans')?.value || '';
+      body().innerHTML += loadingCard('Revealing domain and assessing answer…');
+      try {
+        const data = await callAgent('interleaving', `Learner's answer and domain ID: "${ans}". Reveal the domain, assess domain identification, score the clinical answer, explain key concepts, flag discrimination errors.`);
+        done++; logEvent('interleaving','interleave_reveal',{});
+        body().innerHTML = agentResponseCard(data.text, '#854F0B') + `
+          <div class="btn-row">
+            <button class="btn primary" onclick="window._ilNext()">Next question →</button>
+            <button class="btn" onclick="window._ilSummary()">End session (${done} done)</button>
+          </div>`;
+        window._ilNext = () => {
+          body().innerHTML = loadingCard('Generating next interleaved question…');
+          callAgent('interleaving',`Next interleaved question for "${LEARNER?.topic}". Different domain, do not reveal it.`).then(d => renderILQuestion(d.text)).catch(e => { body().innerHTML = `<div class="feedback danger show">${e.message}</div>`; });
+        };
+      } catch(e) { body().innerHTML = `<div class="feedback danger show">Error: ${e.message}</div>`; }
+    };
+    window._ilSkip = () => {
+      body().innerHTML = loadingCard('Loading next question…');
+      callAgent('interleaving',`Skip and generate a new interleaved question for "${LEARNER?.topic}" from a different domain. Do not reveal the domain.`).then(d => renderILQuestion(d.text)).catch(e => { body().innerHTML = `<div class="feedback danger show">${e.message}</div>`; });
+    };
+  }
+
+  window._ilStart = startInterleaving;
+  window._ilSummary = () => {
+    body().innerHTML = `<div class="card">
+      <div class="section-label">Interleaving complete · ${LEARNER?.topic}</div>
+      <div style="display:flex;align-items:center;gap:20px;padding:14px;background:var(--bg2);border-radius:var(--radius);margin-bottom:14px">
+        <div style="font-size:36px;font-weight:600">${done}</div>
+        <div class="stext">questions across mixed domains<br>Discrimination and transfer practice complete</div>
+      </div>
+      <div class="btn-row">
+        <button class="btn primary" onclick="window._ilStart()">New session</button>
+        <button class="btn" onclick="goTo('recommend')">Recommendations →</button>
+      </div></div>`;
+  };
+  document.querySelector('[data-panel="interleaving"]').addEventListener('click', () => {
+    if (!body().innerHTML.trim()) startInterleaving();
+  });
+  startInterleaving();
+}
+
+// ═══════════════════════════════════════════════════════
+// AGENT 4 — REFLECTION (dynamic)
+// ═══════════════════════════════════════════════════════
+function initReflection() {
+  const journal = [];
+  const frameworks = [
+    { label:'Calibration', icon:'◎', theory:'Dunning-Kruger / Flavell 1979' },
+    { label:'Error analysis', icon:'△', theory:'Butterfield & Metcalfe 2001' },
+    { label:'Connection', icon:'⟡', theory:'Craik & Lockhart 1972' },
+    { label:'Transfer', icon:'→', theory:'Morris et al. 1977' },
+    { label:'Goals', icon:'◈', theory:'Zimmerman 2000' },
+  ];
+  let activeF = 0;
+  function body() { return document.getElementById('ref-body'); }
+
+  function frameworkTabs() {
+    return `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">
+      ${frameworks.map((fr,i)=>`<button class="btn sm${i===activeF?' primary':''}" onclick="window._refSwitch(${i})">${fr.icon} ${fr.label}</button>`).join('')}
+    </div>`;
+  }
+
+  async function loadFramework(idx) {
+    activeF = idx;
+    const f = frameworks[idx];
+    body().innerHTML = frameworkTabs() + loadingCard(`Loading ${f.label} reflection prompt…`);
+    try {
+      const data = await callAgent('reflection', `Use the ${f.label} framework (${f.theory}) to generate a targeted reflection prompt for this learner about their recent practice on "${LEARNER?.topic}". Base it on their actual performance history. Include a primary question and a Socratic follow-up.`);
+      renderReflectForm(data.text, f);
+    } catch(e) {
+      body().innerHTML = frameworkTabs() + `<div class="feedback danger show">Error: ${e.message}</div>`;
+    }
+  }
+
+  function renderReflectForm(promptText, f) {
+    body().innerHTML = frameworkTabs() + `
+      <div class="card">
+        <div class="section-label">${f.label} · <span style="font-style:italic">${f.theory}</span></div>
+        <div style="font-size:13px;color:var(--text);line-height:1.75;margin-bottom:14px">${promptText.replace(/\n/g,'<br>')}</div>
+        <textarea id="r1" placeholder="Your reflection…" style="min-height:110px"></textarea>
+        <button class="btn primary" style="margin-top:10px" onclick="window._refSubmit()">Submit reflection</button>
+      </div>
+      ${journal.length ? `<div class="card"><div class="section-label">Journal (${journal.length} entries)</div>${journal.slice(-3).reverse().map(e=>`<div style="padding:6px 0;border-bottom:0.5px solid var(--border);font-size:12px;color:var(--text2)">${e.framework} · ${e.time} — ${e.text.substring(0,80)}…</div>`).join('')}</div>` : ''}`;
+
+    window._refSubmit = async () => {
+      const r1 = document.getElementById('r1')?.value.trim();
+      if (!r1) return;
+      body().innerHTML = frameworkTabs() + loadingCard('Analysing reflection…');
+      try {
+        const data = await callAgent('reflection', `Learner's ${f.label} reflection: "${r1}". Identify insights vs blind spots. Flag critical knowledge gaps. Ask one Socratic follow-up challenging the most significant blind spot.`);
+        journal.push({framework:f.label, text:r1, time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})});
+        STATE.learnerProfile.reflectionEngagement = Math.min(1, STATE.learnerProfile.reflectionEngagement + 0.12);
+        logEvent('reflection','reflection_saved',{framework:f.label});
+        body().innerHTML = frameworkTabs() + agentResponseCard(data.text, '#534AB7') + `
+          <div class="card" style="margin-top:0">
+            <div class="section-label">Follow-up response</div>
+            <textarea id="r2" placeholder="Your follow-up answer…" style="min-height:80px"></textarea>
+            <div class="btn-row">
+              <button class="btn primary" onclick="window._refSave()">Save to journal</button>
+              <button class="btn" onclick="window._refSwitch(${activeF})">New prompt</button>
+            </div>
+          </div>`;
+        window._refSave = () => {
+          const r2 = document.getElementById('r2')?.value.trim();
+          if (r2) journal.push({framework:f.label+' follow-up', text:r2, time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})});
+          loadFramework(activeF);
+        };
+      } catch(e) { body().innerHTML = frameworkTabs() + `<div class="feedback danger show">Error: ${e.message}</div>`; }
+    };
+  }
+
+  window._refSwitch = i => loadFramework(i);
+  window._refStart = () => loadFramework(0);
+  document.querySelector('[data-panel="reflection"]').addEventListener('click', () => {
+    if (!body().innerHTML.trim()) loadFramework(0);
+  });
+  loadFramework(0);
+}
   let sessionHistory = [];
   let questionCount = 0;
   let correctCount = 0;
@@ -702,232 +984,7 @@ document.head.appendChild(spinStyle);
   document.querySelector('[data-panel="retrieval"]').addEventListener('click', () => {
     if (body.innerHTML.trim() === '') startSession();
   });
-  startSession();
-})();
-
-// ═══════════════════════════════════════════════════════
-// AGENT 2 — SPACING (dynamic)
-// ═══════════════════════════════════════════════════════
-(function() {
-  const body = document.getElementById('sp-body');
-
-  async function startSpacing() {
-    body.innerHTML = loadingCard('Checking your spacing schedule via Claude…');
-    try {
-      const data = await callAgent('spacing', `Check what concepts are due for spaced repetition review for this learner on the topic of ${LEARNER?.topic || 'Myocardial Infarction'}. If concepts are due, present the first one for recall practice. If none are due, tell the learner their schedule and when to return.`);
-      renderSpacingResponse(data.text);
-    } catch(e) {
-      body.innerHTML = `<div class="feedback danger show">Error: ${e.message}</div><button class="btn" onclick="startSpacing()" style="margin-top:10px">Retry</button>`;
-    }
-  }
-
-  function renderSpacingResponse(text) {
-    body.innerHTML = agentResponseCard(text, '#0F6E56') + `
-      <div class="card" style="margin-top:0">
-        <div class="section-label">Your recall</div>
-        <textarea id="sp-ans" placeholder="Write everything you can recall about this concept before rating…" style="min-height:100px"></textarea>
-        <div class="btn-row" style="margin-top:10px">
-          ${['Forgot','Partial','Good','Perfect'].map((l,i) => `<button class="btn" onclick="rateSpacing(${i},'${l}')">${l}</button>`).join('')}
-        </div>
-      </div>`;
-    window.rateSpacing = async (score, label) => {
-      const ans = document.getElementById('sp-ans')?.value || '';
-      body.innerHTML += loadingCard('Saving recall rating and scheduling next review…');
-      try {
-        const data = await callAgent('spacing', `The learner rated their recall as "${label}" (score ${score}/3). Their written recall was: "${ans}". Schedule the next review accordingly using SM-2, give feedback on what they missed, and present the next due concept if any remain.`);
-        logEvent('spacing','review_rated',{score});
-        body.innerHTML = agentResponseCard(data.text, '#0F6E56') + `
-          <div class="btn-row">
-            <button class="btn primary" onclick="continueSpacing()">Continue →</button>
-            <button class="btn" onclick="startSpacing()">Restart session</button>
-          </div>`;
-        window.continueSpacing = () => {
-          body.innerHTML = loadingCard('Loading next due concept…');
-          callAgent('spacing', 'Continue to the next due concept for review, or confirm all are done.').then(d => renderSpacingResponse(d.text)).catch(e => { body.innerHTML = `<div class="feedback danger show">${e.message}</div>`; });
-        };
-      } catch(e) {
-        body.innerHTML = `<div class="feedback danger show">Error: ${e.message}</div>`;
-      }
-    };
-  }
-
-  window._spStart = startSpacing;
-  document.querySelector('[data-panel="spacing"]').addEventListener('click', () => {
-    if (body.innerHTML.trim() === '') startSpacing();
-  });
-  startSpacing();
-})();
-
-// ═══════════════════════════════════════════════════════
-// AGENT 3 — INTERLEAVING (dynamic)
-// ═══════════════════════════════════════════════════════
-(function() {
-  const body = document.getElementById('il-body');
-  let done = 0;
-
-  async function startInterleaving() {
-    done = 0;
-    body.innerHTML = loadingCard('Generating interleaved question across domains…');
-    try {
-      const data = await callAgent('interleaving', `Start an interleaved practice session for the topic "${LEARNER?.topic || 'Myocardial Infarction'}". Randomly select one of these 4 domains: Pathophysiology, Pharmacology, Diagnosis, or Clinical Management. Generate a question WITHOUT revealing the domain. Tell the learner to identify the domain before answering.`);
-      renderILQuestion(data.text);
-    } catch(e) {
-      body.innerHTML = `<div class="feedback danger show">Error: ${e.message}</div><button class="btn" onclick="startInterleaving()" style="margin-top:10px">Retry</button>`;
-    }
-  }
-
-  function renderILQuestion(text) {
-    body.innerHTML = `
-      <div class="card">
-        <div class="section-label">Interleaved session · question ${done+1} · domain hidden · ${LEARNER?.topic}</div>
-        <div class="feedback info show" style="margin-bottom:14px">Identify the domain (Pathophysiology / Pharmacology / Diagnosis / Clinical Management) before answering.</div>
-        <div class="qtext">${text.replace(/\n/g,'<br>')}</div>
-        <textarea id="il-ans" placeholder="State the domain, then write your answer…" style="min-height:100px"></textarea>
-        <div class="btn-row">
-          <button class="btn primary" onclick="submitIL()">Submit &amp; reveal domain</button>
-          <button class="btn" onclick="skipIL()">Skip</button>
-        </div>
-      </div>`;
-    window.submitIL = async () => {
-      const ans = document.getElementById('il-ans')?.value || '';
-      body.innerHTML += loadingCard('Revealing domain and assessing answer…');
-      try {
-        const data = await callAgent('interleaving', `The learner's answer and domain identification: "${ans}". Now reveal the domain, assess whether they identified it correctly, score their clinical answer, explain the key concepts, and flag any discrimination errors.`);
-        done++;
-        logEvent('interleaving','interleave_reveal',{});
-        body.innerHTML = agentResponseCard(data.text, '#854F0B') + `
-          <div class="btn-row">
-            <button class="btn primary" onclick="nextIL()">Next question →</button>
-            <button class="btn" onclick="showILSummary()">End session (${done} done)</button>
-          </div>`;
-        window.nextIL = () => {
-          body.innerHTML = loadingCard('Generating next interleaved question…');
-          callAgent('interleaving', `Generate the next interleaved question for "${LEARNER?.topic}". Pick a different domain from before. Do not reveal the domain.`).then(d => renderILQuestion(d.text)).catch(e => { body.innerHTML = `<div class="feedback danger show">${e.message}</div>`; });
-        };
-      } catch(e) {
-        body.innerHTML = `<div class="feedback danger show">Error: ${e.message}</div>`;
-      }
-    };
-    window.skipIL = () => {
-      body.innerHTML = loadingCard('Loading next question…');
-      callAgent('interleaving', `Skip this question and generate a new interleaved question for "${LEARNER?.topic}" from a different domain. Do not reveal the domain.`).then(d => renderILQuestion(d.text)).catch(e => { body.innerHTML = `<div class="feedback danger show">${e.message}</div>`; });
-    };
-  }
-
-  function showILSummary() {
-    body.innerHTML = `<div class="card">
-      <div class="section-label">Interleaving session complete · ${LEARNER?.topic}</div>
-      <div style="display:flex;align-items:center;gap:20px;padding:14px;background:var(--bg2);border-radius:var(--radius);margin-bottom:14px">
-        <div style="font-size:36px;font-weight:600">${done}</div>
-        <div class="stext">questions across mixed domains<br>Discrimination and transfer practice complete</div>
-      </div>
-      <div class="btn-row">
-        <button class="btn primary" onclick="startInterleaving()">New session</button>
-        <button class="btn" onclick="goTo('recommend')">Recommendations →</button>
-      </div>
-    </div>`;
-  }
-
-  window._ilStart = startInterleaving;
-  document.querySelector('[data-panel="interleaving"]').addEventListener('click', () => {
-    if (body.innerHTML.trim() === '') startInterleaving();
-  });
-  startInterleaving();
-})();
-
-// ═══════════════════════════════════════════════════════
-// AGENT 4 — REFLECTION (dynamic)
-// ═══════════════════════════════════════════════════════
-(function() {
-  const body = document.getElementById('ref-body');
-  const journal = [];
-  const frameworks = [
-    { label:'Calibration', icon:'◎', theory:'Dunning-Kruger / Flavell 1979' },
-    { label:'Error analysis', icon:'△', theory:'Butterfield & Metcalfe 2001' },
-    { label:'Connection', icon:'⟡', theory:'Craik & Lockhart 1972' },
-    { label:'Transfer', icon:'→', theory:'Morris et al. 1977' },
-    { label:'Goals', icon:'◈', theory:'Zimmerman 2000' },
-  ];
-  let activeF = 0;
-  let currentPrompt = '';
-
-  async function loadFramework(idx) {
-    activeF = idx;
-    const f = frameworks[idx];
-    body.innerHTML = frameworkTabs() + loadingCard(`Loading ${f.label} reflection prompt…`);
-    try {
-      const data = await callAgent('reflection', `Use the ${f.label} reflection framework (${f.theory}) to generate a targeted reflection prompt for this learner about their recent practice on "${LEARNER?.topic || 'Myocardial Infarction'}". Base the prompt on their actual performance history and gaps. Include a primary question and a Socratic follow-up.`);
-      currentPrompt = data.text;
-      renderReflectForm(data.text, f);
-    } catch(e) {
-      body.innerHTML = frameworkTabs() + `<div class="feedback danger show">Error: ${e.message}</div>`;
-    }
-  }
-
-  function frameworkTabs() {
-    return `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">
-      ${frameworks.map((fr,i)=>`<button class="btn sm${i===activeF?' primary':''}" onclick="switchReflectF(${i})">${fr.icon} ${fr.label}</button>`).join('')}
-    </div>`;
-  }
-
-  function renderReflectForm(promptText, f) {
-    body.innerHTML = frameworkTabs() + `
-      <div class="card">
-        <div class="section-label">${f.label} · <span style="font-style:italic">${f.theory}</span></div>
-        <div style="font-size:13px;color:var(--text);line-height:1.75;margin-bottom:14px">${promptText.replace(/\n/g,'<br>')}</div>
-        <textarea id="r1" placeholder="Your reflection…" style="min-height:110px"></textarea>
-        <button class="btn primary" style="margin-top:10px" onclick="submitReflection()">Submit reflection</button>
-      </div>
-      ${journal.length ? `<div class="card">
-        <div class="section-label">Reflection journal (${journal.length} entries)</div>
-        ${journal.slice(-4).reverse().map(e=>`<div style="padding:8px 0;border-bottom:0.5px solid var(--border)">
-          <div style="font-size:10px;color:var(--text3);margin-bottom:3px">${e.framework} · ${e.time}</div>
-          <div style="font-size:13px;color:var(--text)">${e.text.substring(0,120)}${e.text.length>120?'…':''}</div>
-        </div>`).join('')}
-      </div>` : ''}`;
-
-    window.switchReflectF = i => loadFramework(i);
-    window.submitReflection = async () => {
-      const r1 = document.getElementById('r1')?.value.trim();
-      if (!r1) return;
-      body.innerHTML = frameworkTabs() + loadingCard('Analysing your reflection and generating Socratic follow-up…');
-      try {
-        const data = await callAgent('reflection', `The learner's reflection using the ${f.label} framework: "${r1}". Identify genuine insights vs blind spots. Flag any critical knowledge gap revealed. Then ask one targeted Socratic follow-up question that challenges the most significant blind spot.`);
-        journal.push({ framework: f.label, text: r1, time: new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) });
-        STATE.learnerProfile.reflectionEngagement = Math.min(1, STATE.learnerProfile.reflectionEngagement + 0.12);
-        logEvent('reflection','reflection_saved',{framework:f.label});
-        body.innerHTML = frameworkTabs() + agentResponseCard(data.text, '#534AB7') + `
-          <div class="card" style="margin-top:0">
-            <div class="section-label">Follow-up response</div>
-            <textarea id="r2" placeholder="Your follow-up answer…" style="min-height:80px"></textarea>
-            <div class="btn-row">
-              <button class="btn primary" onclick="saveFollowup()">Save to journal</button>
-              <button class="btn" onclick="loadFramework(${activeF})">New prompt</button>
-            </div>
-          </div>
-          ${journal.length ? `<div class="card"><div class="section-label">Journal (${journal.length} entries)</div>${journal.slice(-3).reverse().map(e=>`<div style="padding:6px 0;border-bottom:0.5px solid var(--border);font-size:12px;color:var(--text2)">${e.framework} · ${e.time} — ${e.text.substring(0,80)}…</div>`).join('')}</div>` : ''}`;
-        window.saveFollowup = () => {
-          const r2 = document.getElementById('r2')?.value.trim();
-          if (r2) journal.push({ framework: f.label + ' follow-up', text: r2, time: new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) });
-          loadFramework(activeF);
-        };
-      } catch(e) {
-        body.innerHTML = frameworkTabs() + `<div class="feedback danger show">Error: ${e.message}</div>`;
-      }
-    };
-  }
-
-  window._refStart = () => loadFramework(0);
-  document.querySelector('[data-panel="reflection"]').addEventListener('click', () => {
-    if (body.innerHTML.trim() === '') loadFramework(0);
-  });
-  loadFramework(0);
-})();
-
-// ═══════════════════════════════════════════════════════
-// PLACEHOLDER — kept for backward compat (static Qs removed)
-// GUIDE
-// ═══════════════════════════════════════════════════════
+  // started by enterApp()
 (function() {
   const body = document.getElementById('guide-body');
   let activeTab = 'learner';
@@ -1157,6 +1214,11 @@ function enterApp(learner) {
   window.history.replaceState({}, '', url);
   renderDashboard();
   renderRecommend();
+  // Initialise agents now that DOM is visible and LEARNER is set
+  initRetrieval();
+  initSpacing();
+  initInterleaving();
+  initReflection();
 }
 
 function doLogout() {
