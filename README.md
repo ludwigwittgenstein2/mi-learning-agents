@@ -1,131 +1,210 @@
-# MI Learning Agents v2.0 — Full Agentic System
+# MI Learning Agents
 
-Theory-grounded agentic AI for healthcare education.
-7 agents with real tool use, persistent learner profiles, spaced repetition email reminders, and research data export.
+**Theory-Grounded AI Healthcare Education System**  
+Rejeleene & Mehta · Cleveland Clinic · AI in Medical Education · 2026
 
-**Rejeleene & Mehta · Cleveland Clinic · 2026**
-
----
-
-## What makes this genuinely agentic
-
-Each agent runs a tool-use loop (not just text generation):
-
-1. **Calls `get_learner_history`** — reads your actual past answers and gaps
-2. **Calls `get_learner_stats`** — checks your overall performance
-3. **Reasons** about what to do based on real data
-4. **Generates** a personalized question or prompt
-5. **Receives** your answer
-6. **Calls `save_answer`** — records the interaction to the database
-7. **Calls `schedule_review`** — updates the SM-2 spaced repetition schedule
-8. **Calls `flag_weak_concept`** — marks gaps for priority review
-
-This is a perception → reasoning → action loop. Claude is not just generating text — it is reading state, deciding actions, and writing back to a database.
+A multi-agent AI learning system built on validated cognitive science mechanisms — testing effect, spaced repetition, interleaved practice, and metacognitive reflection. Each agent is powered by Claude (Anthropic) and generates questions dynamically based on the learner's selected clinical topic.
 
 ---
 
-## Quick start
+## Screenshots
 
-### 1. Clone / unzip and install
+### Learning Dashboard & Agent Recommendations
+![Dashboard showing concept mastery, agent activity, and topic selector](assets/app.png)
+
+### Login
+![MI Learning Agents application Login](assets/login.png)
+
+---
+
+## Features
+
+- **4 AI Agents** — each grounded in a specific learning science theory
+- **Dynamic topic switching** — change clinical topic and all agents adapt instantly
+- **Spaced repetition** — SM-2 algorithm schedules each concept at the optimal forgetting-curve moment
+- **Daily email reports** — 8:00 AM ET, showing accuracy, missed questions, weak concepts, and review links
+- **Learner profiles** — per-learner performance tracking, answer history, concept mastery
+- **Research export** — password-protected JSON export of all learner data for IRB studies
+
+---
+
+## The 4 Agents
+
+| Agent | Theory | What it does |
+|---|---|---|
+| **Retrieval** | Testing Effect (Roediger & Karpicke 2006) | Generates MCQs; forces recall before feedback; flags weak concepts for spacing |
+| **Spacing** | Forgetting Curve / SM-2 (Ebbinghaus 1885, Wozniak 1987) | Surfaces due concepts at the optimal retention point; SM-2 scheduling |
+| **Interleaving** | Discrimination Learning (Kornell & Bjork 2008) | Mixes domains randomly; learner identifies domain before answering |
+| **Reflection** | Metacognition (Schön 1983, Flavell 1979) | Generates personalised prompts from actual error history; Socratic follow-up |
+
+---
+
+## How to Use
+
+### For Learners
+
+1. **Open the app** at your deployment URL
+2. **Register** with your name, email, and Anthropic API key — or **Sign in** if already registered
+3. **Go to Recommend** (under Orchestrator in the sidebar) — the orchestrator ranks all 4 agents by your current learning need
+4. **Select a topic** from the preset list or type a custom clinical topic — all agents switch immediately
+5. **Use the top-ranked agent** for 10–15 minutes per session
+6. **Check your email at 8:00 AM ET** — daily report shows accuracy, questions you got wrong, weak concepts, and direct links to retake or review
+
+### Agent guides
+
+**Retrieval agent**
+- Answer each MCQ without notes
+- Select A / B / C / D or write a free-text answer
+- Claude assesses your answer, explains the correct reasoning, and flags gaps
+- Do not skip ahead — the struggle before seeing the answer is the learning mechanism
+
+**Spacing agent**
+- Claude checks which concepts are due on your SM-2 schedule
+- Write everything you can recall before rating
+- Rate your recall honestly: Forgot / Partial / Good / Perfect
+- Your rating sets the next review interval — overrating delays the next review too far
+
+**Interleaving agent**
+- Questions come from 4 domains in random order: Pathophysiology, Pharmacology, Diagnosis, Clinical Management
+- Identify the domain before answering — this is the core exercise
+- Domain is revealed after you submit
+
+**Reflection agent**
+- Choose a framework: Calibration, Error analysis, Connection, Transfer, or Goals
+- Claude generates a prompt grounded in your actual performance history
+- Write a reflection, then answer the Socratic follow-up
+- Entries are saved to your reflection journal
+
+---
+
+## Setup & Deployment
+
+### Prerequisites
+
+- Node.js 18+
+- PostgreSQL database (Railway, Supabase, or local)
+- Anthropic API key (each learner provides their own)
+- Resend account for email (free tier: 100 emails/day)
+
+### Environment variables
+
+Set these in Railway (or your `.env` file for local development):
+
+```
+DATABASE_URL=postgresql://...
+ANTHROPIC_API_KEY=sk-ant-...        # server key for orchestrator
+ENCRYPTION_KEY=your-secret-key      # AES key for encrypting learner API keys
+RESEND_API_KEY=re_...               # from resend.com
+FROM_EMAIL=onboarding@resend.dev    # verified sender address
+BASE_URL=https://your-app.railway.app
+RESEARCH_PASSWORD=research2026      # for /api/research/export
+```
+
+### Local development
+
 ```bash
+git clone https://github.com/ludwigwittgenstein2/mi-learning-agents.git
+cd mi-learning-agents
 npm install
+cp .env.example .env   # fill in your values
+npm start
 ```
 
-### 2. Add PostgreSQL database on Railway
-Railway dashboard → your project → **+ New** → **Database** → **PostgreSQL**
-Railway automatically sets `DATABASE_URL`.
+App runs at `http://localhost:3000`
 
-### 3. Set environment variables on Railway
-Go to your project → **Variables** → add:
+### Deploy to Railway
 
-| Variable | Value |
-|----------|-------|
-| `DATABASE_URL` | Set automatically by Railway PostgreSQL |
-| `ENCRYPTION_KEY` | Any random 32-character string |
-| `RESEND_API_KEY` | From resend.com (free, optional) |
-| `FROM_EMAIL` | Your verified sender email |
-| `BASE_URL` | Your Railway app URL |
-| `RESEARCH_PASSWORD` | Password for data export |
-
-### 4. Deploy
-Push to GitHub → Railway auto-deploys.
-
-Or run locally:
-```bash
-cp .env.example .env
-# Fill in .env values
-node server.js
-```
+1. Connect your GitHub repo to Railway
+2. Add a PostgreSQL plugin
+3. Set all environment variables in the Variables tab
+4. Railway deploys automatically on every `git push`
 
 ---
 
-## User flow
+## API Reference
 
-1. Learner opens the app
-2. Enters name, email, and their own Anthropic API key
-3. Key is AES-256 encrypted and stored in PostgreSQL
-4. All 7 agents use their key — you pay nothing
-5. Spaced repetition schedule builds automatically
-6. Daily emails remind them when concepts are due
-7. All interactions logged for research export
-
----
-
-## Research data export
+### Learner endpoints
 
 ```
-GET /api/research/export?password=your-research-password
+POST /api/learner              Register new learner
+POST /api/learner/login        Sign in (requires email + API key)
+GET  /api/learner/:id          Get profile, stats, concepts
+PATCH /api/learner/:id/topic   Update active topic
+GET  /api/learner/:id/concepts Concept schedule
+GET  /api/learner/:id/history  Answer history (last 20)
 ```
 
-Returns JSON with all learner interactions:
-- Agent used
-- Question asked
-- Learner answer
-- Score (0-100)
-- Gaps identified
-- Timestamp
+### Agent endpoints
 
-Export to CSV for your results section.
+```
+POST /api/agent/retrieval       Retrieval agent (agentic loop)
+POST /api/agent/spacing         Spacing agent
+POST /api/agent/interleaving    Interleaving agent
+POST /api/agent/reflection      Reflection agent
+POST /api/agent/orchestrator    Orchestrator ranking
+```
+
+All agent endpoints require: `{ learnerId, message, topic }`
+
+### Research export
+
+```
+GET /api/research/export?password=research2026
+```
+
+Returns all answer records across all learners as JSON. Each record contains: `learner_id`, `agent`, `topic`, `question`, `answer`, `score` (0–100), `correct` (boolean), `gaps` (array), `feedback`, `created_at`.
 
 ---
 
 ## Architecture
 
 ```
-Learner → index.html
-    ↓ POST /api/learner (register/login)
-    ↓ POST /api/agent/:name (agent session)
-         ↓
-    server.js → agents.js (tool-use loop)
-         ↓              ↓
-    db.js          Anthropic API
-    (PostgreSQL)   (learner's key)
-         ↓
-    Daily cron → email.js → Resend SMTP
+Frontend (index.html)
+  └── Vanilla JS — login, topic selector, 4 agent panels, dashboard
+
+Backend (server.js / Express)
+  ├── Auth routes — register, login, profile
+  ├── Agent routes — agentic loop via Anthropic SDK
+  ├── Spacing routes — concept schedule, SM-2
+  └── Cron job — daily 8:00 AM ET email reports
+
+Database (PostgreSQL)
+  ├── learners — profile, encrypted API key, topic
+  ├── concepts — SM-2 schedule per learner
+  ├── answers  — full answer history with gaps
+  ├── sessions — agent session log
+  └── reminders — email log
+
+Email (Resend HTTP API)
+  ├── Welcome email — on registration
+  └── Daily report — accuracy, wrong questions, weak concepts, review links
+```
+
+### Agentic tool loop
+
+Each agent runs up to 6 iterations:
+1. `get_learner_history` — personalise to prior errors
+2. `get_learner_stats` — calibrate difficulty
+3. Generate question / prompt
+4. `save_answer` — log interaction with score and gaps
+5. `flag_weak_concept` — schedule immediate review for critical gaps
+6. `schedule_review` — SM-2 update for the concept just tested.
+
+**Theoretical basis:** the system tests the hypothesis that structured multi-agent learning (testing effect + spacing + interleaving + metacognition) produces more durable retention than unstructured LLM conversation, even when the underlying model is identical.
+
+---
+
+## Citation
+
+```
+Rejeleene R, Mehta N. MI Learning Agents: A Theory-Grounded Multi-Agent AI System 
+for Healthcare Education. Cleveland Clinic, 2026.
 ```
 
 ---
 
-## The 7 agents and their tools
+## License
 
-| Agent | Theory | Tools called |
-|-------|--------|-------------|
-| Retrieval | Testing Effect | get_learner_history, save_answer, flag_weak_concept, schedule_review |
-| Spacing | Forgetting Curve / SM-2 | get_due_concepts, schedule_review, save_answer |
-| Interleaving | Discrimination Learning | get_learner_history, save_answer, flag_weak_concept |
-| Generation | Generation Effect | get_learner_history, get_learner_stats, save_answer, flag_weak_concept, schedule_review |
-| Elaboration | Elaborative Interrogation | get_learner_history, save_answer, schedule_review |
-| Reflection | Metacognition / Schön | get_learner_stats, get_learner_history, save_answer, flag_weak_concept |
-| Difficulty | Desirable Difficulties / Bjork | get_learner_stats, get_learner_history, save_answer |
+MIT License — see LICENSE file.
 
----
-
-## Cost estimate (Railway)
-
-| Component | Cost |
-|-----------|------|
-| Railway server | ~$0.50/month |
-| Railway PostgreSQL | Free (100MB) |
-| Resend email | Free (3000/month) |
-| Anthropic API | Paid by each user with their own key |
-| **Total to you** | **~$0.50/month** |
+Built with [Anthropic Claude](https://anthropic.com) · [Railway](https://railway.app) · [Resend](https://resend.com)
