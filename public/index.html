@@ -564,262 +564,319 @@ async function applyCustomTopic() {
 }
 
 // ═══════════════════════════════════════════════════════
-// AGENT 1 — RETRIEVAL
+// SHARED — call backend agent
+// ═══════════════════════════════════════════════════════
+async function callAgent(agentName, message) {
+  if (!LEARNER) return { text: 'Not logged in.' };
+  const res = await fetch(`${API}/api/agent/${agentName}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      learnerId: LEARNER.id,
+      message,
+      topic: LEARNER.topic || 'Myocardial Infarction',
+    }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Agent error');
+  return data;
+}
+
+function loadingCard(msg) {
+  return `<div class="card"><div style="display:flex;align-items:center;gap:12px;padding:8px 0">
+    <div style="width:18px;height:18px;border-radius:50%;border:2px solid var(--border3);border-top-color:var(--text);animation:spin .8s linear infinite;flex-shrink:0"></div>
+    <div style="font-size:13px;color:var(--text2)">${msg}</div>
+  </div></div>`;
+}
+
+function agentResponseCard(text, agentColor) {
+  // Parse markdown-ish formatting for display
+  const html = text
+    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+    .replace(/\n\n/g, '</p><p style="margin-top:10px">')
+    .replace(/\n/g, '<br>');
+  return `<div class="card" style="border-left:3px solid ${agentColor}">
+    <div style="font-size:13px;color:var(--text);line-height:1.75"><p>${html}</p></div>
+  </div>`;
+}
+
+// Add spin animation
+const spinStyle = document.createElement('style');
+spinStyle.textContent = '@keyframes spin { to { transform: rotate(360deg); } }';
+document.head.appendChild(spinStyle);
+
+// ═══════════════════════════════════════════════════════
+// AGENT 1 — RETRIEVAL (dynamic)
 // ═══════════════════════════════════════════════════════
 (function() {
-  const Qs = [
-    { q: 'A 62-year-old has crushing substernal pain, diaphoresis, and ST-elevation in leads II, III, aVF. Which artery is most likely occluded?', opts: ['Left anterior descending (LAD)', 'Right coronary artery (RCA)', 'Left circumflex artery (LCx)', 'Left main coronary artery'], ans: 1, exp: 'Inferior STEMI (STE in II, III, aVF) is caused by RCA occlusion in ~80% of cases. The RCA supplies the inferior wall, posterior wall, SA and AV nodes.' },
-    { q: 'Which biomarker has the highest sensitivity for MI in the first 3 hours using modern assays?', opts: ['CK-MB', 'Standard Troponin I', 'High-sensitivity Troponin T (hs-TnT)', 'Myoglobin'], ans: 2, exp: 'hs-TnT detects injury within 1–3 hours, enabling the ESC 0h/3h rapid rule-out algorithm. Standard troponin requires 6 hours for reliable detection.' },
-    { q: 'Primary PCI cannot be performed within 120 minutes of first medical contact. What is the preferred reperfusion strategy?', opts: ['Observation with anticoagulation', 'Primary PCI regardless of time', 'Fibrinolysis followed by transfer for angiography', 'Emergency CABG'], ans: 2, exp: 'ESC guidelines recommend fibrinolysis when primary PCI exceeds 120 minutes. Pharmaco-invasive strategy (lytics → angiography at 3–24h) follows.' },
-    { q: 'Killip Class III is characterized by which clinical finding?', opts: ['No signs of heart failure', 'Mild pulmonary rales + S3 gallop', 'Acute pulmonary edema with severe bilateral rales', 'Cardiogenic shock with SBP <90 mmHg'], ans: 2, exp: 'Killip III = acute pulmonary edema. Killip I = no HF signs (mortality ~6%). Killip IV = cardiogenic shock (mortality ~81%).' },
-    { q: 'A new harsh holosystolic murmur at the left lower sternal border appears on post-MI day 5. Most likely diagnosis?', opts: ['Acute mitral regurgitation', 'Ventricular septal rupture (VSR)', 'Free wall rupture', 'Dressler syndrome'], ans: 1, exp: 'VSR presents days 3–7 post-MI with harsh holosystolic murmur and O₂ step-up from RA to RV on right heart cath. More common in inferior and anterior MI.' },
-    { q: 'Which DAPT regimen is recommended post-primary PCI for STEMI in the absence of high bleeding risk?', opts: ['Aspirin alone for 6 months', 'Aspirin + clopidogrel for 1 month', 'Aspirin + ticagrelor or prasugrel for 12 months', 'Aspirin + warfarin for 6 months'], ans: 2, exp: 'Aspirin + potent P2Y12 inhibitor (ticagrelor or prasugrel preferred) for 12 months. PLATO and TRITON-TIMI 38 established superiority over clopidogrel.' },
-    { q: 'What is the target door-to-balloon time for primary PCI in STEMI from first medical contact?', opts: ['≤30 minutes', '≤60 minutes', '≤90 minutes', '≤120 minutes'], ans: 2, exp: '≤90 minutes from first medical contact. Each 30-minute delay increases 1-year mortality by ~7.5%. Pre-hospital ECG and direct cath lab activation are key.' },
-    { q: 'Which ECG finding in V1–V3 in a pain-free post-chest-pain patient represents a pre-infarction warning of critical proximal LAD stenosis?', opts: ['ST elevation ≥2mm', 'Wellens syndrome (biphasic or inverted T-waves)', 'Q waves in V1–V3', 'New LBBB'], ans: 1, exp: 'Wellens syndrome = biphasic (Type A) or deeply inverted (Type B) T-waves in V2–V3 after chest pain. It indicates critical proximal LAD stenosis. Stress testing is contraindicated — urgent catheterization is needed.' },
-  ];
-  let qi = 0, score = 0, wrong = [], answered = false;
   const body = document.getElementById('ret-body');
+  let sessionHistory = [];
+  let questionCount = 0;
+  let correctCount = 0;
+  let waitingForAnswer = false;
+  let currentQuestion = '';
 
-  function renderQ() {
-    answered = false;
-    const q = Qs[qi];
+  async function startSession() {
+    sessionHistory = []; questionCount = 0; correctCount = 0; waitingForAnswer = false;
+    body.innerHTML = loadingCard(`Generating ${LEARNER?.topic || 'clinical'} question via Claude…`);
+    try {
+      const data = await callAgent('retrieval', `Start a new retrieval practice session. Generate one high-quality multiple-choice question about ${LEARNER?.topic || 'Myocardial Infarction'}. Present the question and 4 options labeled A, B, C, D. Do not reveal the answer yet.`);
+      currentQuestion = data.text;
+      renderQuestion(data.text);
+    } catch(e) {
+      body.innerHTML = `<div class="feedback danger show">Error: ${e.message}</div><button class="btn" onclick="startSession()" style="margin-top:10px">Retry</button>`;
+    }
+  }
+
+  function renderQuestion(questionText) {
+    waitingForAnswer = true;
+    questionCount++;
     body.innerHTML = `
       <div class="card">
-        <div class="section-label">Question ${qi+1} of ${Qs.length}</div>
-        <div class="progress-dots">${Qs.map((_,i) => `<span class="${i<qi?'done':i===qi?'now':''}"></span>`).join('')}</div>
-        <div class="qtext">${q.q}</div>
-        ${q.opts.map((o,i) => `<button class="choice" data-i="${i}">${o}</button>`).join('')}
-        <div class="feedback" id="rfb"></div>
-        <button class="btn" id="rnxt" style="display:none;margin-top:12px">${qi < Qs.length-1 ? 'Next question →' : 'See results →'}</button>
-      </div>`;
-    body.querySelectorAll('.choice').forEach(btn => btn.onclick = () => {
-      if (answered) return; answered = true;
-      const c = parseInt(btn.dataset.i);
-      body.querySelectorAll('.choice').forEach((b,i) => { if(i===q.ans) b.classList.add('correct'); else if(i===c&&c!==q.ans) b.classList.add('incorrect'); });
-      if (c===q.ans) { score++; logEvent('retrieval','correct',{qi}); } else { wrong.push(qi); logEvent('retrieval','incorrect',{qi}); }
-      STATE.learnerProfile.retrievalAccuracy = score/(qi+1);
-      const keys = Object.keys(STATE.conceptMastery);
-      if (qi < keys.length) STATE.conceptMastery[keys[qi]] = Math.min(1, STATE.conceptMastery[keys[qi]] + (c===q.ans ? 0.12 : -0.05));
-      const fb = body.querySelector('#rfb');
-      fb.className = 'feedback show ' + (c===q.ans ? 'success' : 'info');
-      fb.innerHTML = `<strong>${c===q.ans?'Correct':'Incorrect'}</strong> — ${q.exp}`;
-      body.querySelector('#rnxt').style.display = 'inline-block';
-    });
-    body.querySelector('#rnxt').onclick = () => { qi++; qi < Qs.length ? renderQ() : renderScore(); };
-  }
-
-  function renderScore() {
-    const pct = Math.round(score/Qs.length*100);
-    body.innerHTML = `<div class="card">
-      <div class="section-label">Session complete</div>
-      <div style="display:flex;align-items:center;gap:20px;padding:14px;background:var(--bg2);border-radius:var(--radius);margin-bottom:14px">
-        <div style="font-size:36px;font-weight:600;letter-spacing:-0.03em">${score}/${Qs.length}</div>
-        <div><div style="font-size:16px;font-weight:500">${pct}%</div><div class="stext">${pct>=83?'Strong — mastery threshold met':'Below 83% — flagged for spacing review'}</div></div>
-      </div>
-      ${wrong.length ? `<div class="section-label">Flagged for spaced review</div>${wrong.map(i=>`<div style="font-size:12px;color:var(--text2);padding:5px 0;border-bottom:0.5px solid var(--border)">${Qs[i].q.substring(0,85)}…</div>`).join('')}` : '<div class="feedback success show">All items marked as mastered.</div>'}
-      <div class="btn-row">
-        <button class="btn primary" onclick="qi=0;score=0;wrong=[];renderQ()">Retry</button>
-        <button class="btn" onclick="goTo('recommend')">See recommendations →</button>
-      </div>
-    </div>`;
-  }
-
-  renderQ();
-  window._retRenderQ = renderQ;
-})();
-
-// ═══════════════════════════════════════════════════════
-// AGENT 2 — SPACING
-// ═══════════════════════════════════════════════════════
-(function() {
-  const items = [
-    { name:'STEMI ECG criteria', reps:4, interval:14, daysAgo:15, base:82 },
-    { name:'Killip classification', reps:2, interval:6, daysAgo:7, base:65 },
-    { name:'Troponin kinetics', reps:5, interval:21, daysAgo:5, base:90 },
-    { name:'Door-to-balloon', reps:1, interval:3, daysAgo:4, base:40 },
-    { name:'Fibrinolysis indications', reps:3, interval:10, daysAgo:10, base:55 },
-    { name:'Post-MI complications', reps:2, interval:7, daysAgo:2, base:88 },
-    { name:'DAPT regimen', reps:1, interval:3, daysAgo:3, base:52 },
-    { name:'Cardiogenic shock Mx', reps:0, interval:1, daysAgo:0, base:0 },
-  ];
-  const QA = {
-    'STEMI ECG criteria': { q:'What ECG changes define STEMI and which leads indicate inferior, anterior, and lateral infarction?', a:'≥1mm STE in ≥2 contiguous limb leads or ≥2mm precordial. Inferior: II,III,aVF (RCA). Anterior: V1–V4 (LAD). Lateral: I,aVL,V5–V6 (LCx). Posterior: tall R in V1/V2 + ST depression.' },
-    'Door-to-balloon': { q:'What is the door-to-balloon target for primary PCI and what systems reduce delays?', a:'Target ≤90min from first medical contact. Each 30-min delay raises 1-year mortality ~7.5%. Systems: pre-hospital ECG transmission, direct cath lab activation before arrival, bypass of ED.' },
-    'Fibrinolysis indications': { q:'List the absolute contraindications to fibrinolysis in STEMI.', a:'Prior intracranial hemorrhage, known AVM, intracranial malignancy, ischemic stroke <3mo, significant head/facial trauma <3mo, active internal bleeding (not menses), suspected aortic dissection, intracranial surgery <2mo.' },
-    'default': { q:'Describe the key management priorities in the first 24 hours of STEMI.', a:'Aspirin + P2Y12 inhibitor, anticoagulation, reperfusion (primary PCI ≤90min or fibrinolysis), telemetry, echo. Medications: beta-blocker if stable, statin, ACE inhibitor. Avoid: NSAIDs, unnecessary delays.' },
-  };
-
-  const body = document.getElementById('sp-body');
-  let reviewing = null;
-
-  function ret(item) { return item.reps===0 ? 0 : Math.max(5, Math.round(item.base * Math.exp(-item.daysAgo/(item.interval*0.7)))); }
-  function status(item) {
-    if (item.reps===0) return 'new';
-    if (item.daysAgo >= item.interval) return 'due';
-    if (item.daysAgo >= item.interval*0.7) return 'soon';
-    return 'fresh';
-  }
-
-  function renderDash() {
-    const sorted = [...items].sort((a,b) => { const o={due:0,new:1,soon:2,fresh:3}; return o[status(a)]-o[status(b)]; });
-    const due = items.filter(i => status(i)==='due' || status(i)==='new');
-    STATE.agentStats.spacing.due = due.length;
-    body.innerHTML = `
-      <div class="stat-grid two">
-        <div class="stat-box"><div class="stat-num">${due.length}</div><div class="stat-lbl">due for review</div></div>
-        <div class="stat-box"><div class="stat-num">${items.filter(i=>status(i)==='fresh').length}</div><div class="stat-lbl">on track</div></div>
-      </div>
-      <div class="card">
-        <div class="section-label">Concept schedule — sorted by urgency</div>
-        ${sorted.map(item => {
-          const st = status(item), r = ret(item);
-          const col = {due:'#c0392b',soon:'#b45309',fresh:'#2a7a3b',new:'#185FA5'}[st];
-          const lbl = {due:'review now',soon:'due soon',fresh:'on track',new:'not started'}[st];
-          return `<div style="margin-bottom:13px">
-            <div class="flex-row-between" style="margin-bottom:4px">
-              <span style="font-size:13px;color:var(--text)">${item.name}</span>
-              <span style="font-size:10px;color:${col};border:0.5px solid ${col};padding:2px 8px;border-radius:20px">${lbl}</span>
-            </div>
-            <div class="flex-row" style="margin-bottom:2px">
-              <div class="bar-wrap"><div class="bar-fill" style="width:${r}%;background:${col}"></div></div>
-              <span class="stext" style="width:58px;text-align:right;flex-shrink:0">${item.reps===0?'new':r+'% ret.'}</span>
-            </div>
-            <div style="font-size:11px;color:var(--text3)">${item.reps===0?'Never reviewed':'Rep '+item.reps+' · interval '+item.interval+'d · '+item.daysAgo+'d ago'}</div>
-          </div>`;
-        }).join('')}
-      </div>
-      ${due.length ? `<button class="btn primary" onclick="startReview()">Start review session (${due.length} items)</button>` : '<div class="feedback success show">All items on schedule. Next session due tomorrow.</div>'}
-      <div class="card" style="margin-top:12px">
-        <div class="section-label">Spacing principle</div>
-        <div class="stext">SM-2 algorithm (Wozniak 1987): each review extends the interval based on recall quality (1–4 scale). Reviewing at the moment of near-forgetting (~70% retention) produces the largest memory consolidation per time invested — the spacing effect.</div>
-      </div>`;
-    window.startReview = () => { reviewing = { items: items.filter(i => status(i)==='due'||status(i)==='new'), idx: 0 }; renderReview(); logEvent('spacing','review_start',{}); };
-  }
-
-  function renderReview() {
-    const item = reviewing.items[reviewing.idx];
-    const qa = QA[item.name] || QA['default'];
-    body.innerHTML = `<div class="card">
-      <div class="section-label">Spaced review ${reviewing.idx+1}/${reviewing.items.length} · ${item.name}</div>
-      <div class="qtext">${qa.q}</div>
-      <textarea placeholder="Write everything you can recall before seeing the answer..."></textarea>
-      <button class="btn primary" style="margin-top:12px" id="sp-reveal">Reveal answer</button>
-    </div>`;
-    document.getElementById('sp-reveal').onclick = () => {
-      body.innerHTML += `<div class="card">
-        <div class="section-label">Expert answer</div>
-        <div class="qtext" style="font-size:13px">${qa.a}</div>
-        <div style="font-size:13px;color:var(--text2);margin:12px 0 10px">Rate your recall — sets next interval (SM-2):</div>
-        <div class="btn-row">
-          ${['Forgot (1d)','Partial (3d)','Good (7d)','Perfect (14d)'].map((l,i) => `<button class="btn" onclick="rateRecall(${i})">${l}</button>`).join('')}
+        <div class="section-label">Question ${questionCount} · ${LEARNER?.topic || 'Clinical topic'} · Retrieval agent</div>
+        <div class="qtext">${questionText.replace(/\n/g,'<br>')}</div>
+        <div style="margin-top:4px">
+          ${['A','B','C','D'].map(opt => `<button class="choice" onclick="submitAnswer('${opt}')">${opt}</button>`).join('')}
+        </div>
+        <div style="margin-top:10px">
+          <textarea id="ret-free" placeholder="Or write your own answer before selecting..." style="min-height:60px"></textarea>
+          <button class="btn" style="margin-top:6px" onclick="submitFreeAnswer()">Submit written answer</button>
         </div>
       </div>`;
-      window.rateRecall = score => {
-        const ivls = [1,3,7,14];
-        item.interval = ivls[score]; item.daysAgo = 0; item.reps++;
-        STATE.conceptMastery[item.name] = Math.min(1, (STATE.conceptMastery[item.name]||0.5) + (score>=2?0.08:0.02));
-        logEvent('spacing','review_rated',{item:item.name,score});
-        reviewing.idx++;
-        if (reviewing.idx < reviewing.items.length) renderReview();
-        else { body.innerHTML = `<div class="feedback success show">Session complete — ${reviewing.items.length} item${reviewing.items.length>1?'s':''} rescheduled.</div><div class="btn-row"><button class="btn" onclick="window._spRenderDash()">Back to schedule</button></div>`; }
-      };
-    };
-  }
-  window._spRenderDash = renderDash;
-  renderDash();
-})();
-
-// ═══════════════════════════════════════════════════════
-// AGENT 3 — INTERLEAVING
-// ═══════════════════════════════════════════════════════
-(function() {
-  const pool = [
-    { topic:'Pathophysiology', color:'#185FA5', q:'Why does transmural ischemia cause ST elevation rather than depression on the surface ECG?', exp:'Transmural ischemia affects the full myocardial wall, altering the injury current vector toward the epicardium. The epicardial surface becomes relatively positive, projecting STE toward overlying leads. Subendocardial ischemia (partial-thickness) projects toward the endocardium → ST depression.' },
-    { topic:'Pharmacology', color:'#0F6E56', q:'Explain the mechanism by which aspirin irreversibly inhibits platelet aggregation in acute MI.', exp:'Aspirin acetylates COX-1 irreversibly, blocking thromboxane A2 (TXA2) synthesis. TXA2 is a potent platelet activator and vasoconstrictor. Platelets lack nuclei, so cannot synthesize new COX-1 — inhibition lasts the platelet lifespan (7–10 days). 81mg/day is sufficient; higher doses add GI risk without additional antiplatelet benefit.' },
-    { topic:'ECG interpretation', color:'#854F0B', q:'A patient with new LBBB presents with chest pain. What criteria help identify superimposed STEMI?', exp:'Sgarbossa criteria: (1) STE ≥1mm concordant with QRS — most specific; (2) STD ≥1mm in V1–V3 — concordant; (3) STE ≥5mm discordant — sensitive but less specific. Smith-modified Sgarbossa replaces criterion 3 with STE/S-wave ratio ≥0.25, improving sensitivity.' },
-    { topic:'Clinical management', color:'#993556', q:'STEMI patient develops hypotension, elevated JVP, and clear lung fields 4 hours after presentation. Diagnosis and management?', exp:'Right ventricular infarction complicating inferior STEMI (proximal RCA occlusion). Management: avoid nitrates and diuretics (preload-dependent), volume challenge with normal saline, maintain sinus rhythm, treat AV block with atropine/pacing. Reperfusion of the culprit lesion is definitive.' },
-    { topic:'Pathophysiology', color:'#185FA5', q:'Describe the wavefront phenomenon in myocardial infarction and its clinical implications.', exp:'Reimer (1977): ischemic necrosis begins at the subendocardium (lowest perfusion, highest O₂ demand) and propagates outward toward the epicardium over 3–6 hours. Clinical implication: reperfusion within 3h salvages significant myocardium; benefit diminishes thereafter. This is the mechanistic basis of "time is muscle."' },
-    { topic:'Pharmacology', color:'#0F6E56', q:'Why are beta-blockers contraindicated in MI complicated by cardiogenic shock?', exp:'Beta-blockers reduce HR and contractility via β1 blockade. In cardiogenic shock, CO is already critically reduced — further reduction worsens end-organ perfusion. Positive inotropes (dobutamine) and vasopressors (norepinephrine) are the pharmacological backbone in cardiogenic shock. Beta-blockers are used in stable post-MI patients only.' },
-    { topic:'ECG interpretation', color:'#854F0B', q:'What is Wellens syndrome and why is it a cardiology emergency?', exp:'Wellens syndrome: biphasic (Type A) or deeply inverted (Type B) T-waves in V2–V3 in a pain-free state after recent chest pain. Represents critical proximal LAD stenosis with spontaneous reperfusion — not infarction. Pre-infarction warning. Stress testing is absolutely contraindicated. Urgent catheterization is required.' },
-    { topic:'Clinical management', color:'#993556', q:'Which post-MI patient should receive an ICD, and which should wait 40 days?', exp:'ICD before discharge: sustained VT/VF >48h post-MI not due to reversible cause. Wait 40 days: new STEMI with EF<35% but no sustained arrhythmia — EF often recovers with revascularization and GDMT. DINAMIT/IRIS trials showed no benefit and possible harm from early ICD implantation post-MI.' },
-  ];
-
-  const body = document.getElementById('il-body');
-  let queue = [...pool].sort(() => Math.random()-.5), done = [], current = null;
-
-  function nextQ() {
-    if (!queue.length) { showSum(); return; }
-    current = queue.shift();
-    body.innerHTML = `<div class="card">
-      <div class="section-label">Interleaved session · ${queue.length+1} remaining · domain hidden</div>
-      <div class="feedback info show" style="margin-bottom:14px">Identify which MI domain this question belongs to before answering. Domain revealed after you submit.</div>
-      <div class="qtext">${current.q}</div>
-      <textarea placeholder="Your answer — identify the domain: Pathophysiology / Pharmacology / ECG interpretation / Clinical management..."></textarea>
-      <div class="btn-row">
-        <button class="btn primary" onclick="revealIL()">Submit & reveal domain</button>
-        <button class="btn" onclick="ilSkip()">Skip</button>
-      </div>
-    </div>`;
-    window.ilSkip = () => { queue.push(current); nextQ(); };
-    window.revealIL = () => {
-      const c = current; done.push(c);
-      logEvent('interleaving','interleave_reveal',{topic:c.topic});
-      body.innerHTML = `<div class="card">
-        <div style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:500;background:${c.color}20;color:${c.color};margin-bottom:10px">Domain: ${c.topic}</div>
-        <div class="qtext">${c.q}</div>
-        <div style="border-top:0.5px solid var(--border);padding-top:12px;margin-top:4px"><div class="section-label">Expert explanation</div><div class="stext" style="font-size:13px;color:var(--text)">${c.exp}</div></div>
-        <button class="btn primary" style="margin-top:14px" onclick="window._ilNextQ()">Next question →</button>
-      </div>`;
+    window.submitAnswer = opt => submitToAgent(`My answer is ${opt}.`);
+    window.submitFreeAnswer = () => {
+      const val = document.getElementById('ret-free')?.value.trim();
+      if (val) submitToAgent(val);
     };
   }
 
-  function showSum() {
-    const topics = [...new Set(done.map(q=>q.topic))];
+  async function submitToAgent(answer) {
+    if (!waitingForAnswer) return;
+    waitingForAnswer = false;
+    body.innerHTML += loadingCard('Assessing your answer…');
+    try {
+      const data = await callAgent('retrieval', answer);
+      const isCorrect = /correct|well done|right|excellent|accurate/i.test(data.text) && !/incorrect|wrong|not quite|unfortunately/i.test(data.text);
+      if (isCorrect) { correctCount++; logEvent('retrieval','correct',{}); }
+      else { logEvent('retrieval','incorrect',{}); }
+      STATE.learnerProfile.retrievalAccuracy = correctCount / questionCount;
+      body.innerHTML = agentResponseCard(data.text, '#185FA5') + `
+        <div class="btn-row">
+          <button class="btn primary" onclick="nextQuestion()">Next question →</button>
+          <button class="btn" onclick="showSessionSummary()">End session</button>
+        </div>`;
+    } catch(e) {
+      body.innerHTML = `<div class="feedback danger show">Error: ${e.message}</div>`;
+    }
+  }
+
+  async function nextQuestion() {
+    body.innerHTML = loadingCard('Generating next question…');
+    try {
+      const data = await callAgent('retrieval', `Generate the next multiple-choice question about ${LEARNER?.topic || 'Myocardial Infarction'}. Pick a different concept from before. Present 4 options A, B, C, D. Do not reveal the answer.`);
+      currentQuestion = data.text;
+      renderQuestion(data.text);
+    } catch(e) {
+      body.innerHTML = `<div class="feedback danger show">Error: ${e.message}</div>`;
+    }
+  }
+
+  function showSessionSummary() {
+    const pct = questionCount > 0 ? Math.round(correctCount/questionCount*100) : 0;
     body.innerHTML = `<div class="card">
-      <div class="section-label">Interleaving session complete</div>
+      <div class="section-label">Session complete · ${LEARNER?.topic}</div>
       <div style="display:flex;align-items:center;gap:20px;padding:14px;background:var(--bg2);border-radius:var(--radius);margin-bottom:14px">
-        <div style="font-size:36px;font-weight:600">${done.length}</div>
-        <div class="stext">questions across ${topics.length} domains<br>Mixing builds discrimination and transfer to clinical contexts</div>
+        <div style="font-size:36px;font-weight:600;letter-spacing:-0.03em">${correctCount}/${questionCount}</div>
+        <div><div style="font-size:16px;font-weight:500">${pct}%</div>
+        <div class="stext">${pct>=83?'Strong — mastery threshold met':'Below 83% — review flagged concepts'}</div></div>
       </div>
-      ${topics.map(t=>{const col=pool.find(p=>p.topic===t)?.color||'#888';return`<div style="display:flex;align-items:center;gap:10px;margin-bottom:8px"><div class="nav-dot" style="background:${col}"></div><span style="font-size:13px;color:var(--text)">${t}</span><span class="stext">${done.filter(q=>q.topic===t).length} q</span></div>`;}).join('')}
-      <button class="btn" style="margin-top:10px" onclick="window._ilRestart()">Reshuffle &amp; restart</button>
+      <div class="btn-row">
+        <button class="btn primary" onclick="startSession()">New session</button>
+        <button class="btn" onclick="goTo('recommend')">Recommendations →</button>
+      </div>
     </div>`;
   }
 
-  window._ilNextQ = nextQ;
-  window._ilRestart = () => { queue = [...pool].sort(() => Math.random()-.5); done = []; nextQ(); };
-  nextQ();
+  window._retStart = startSession;
+  // Start when panel is clicked
+  document.querySelector('[data-panel="retrieval"]').addEventListener('click', () => {
+    if (body.innerHTML.trim() === '') startSession();
+  });
+  startSession();
 })();
 
 // ═══════════════════════════════════════════════════════
-// AGENT 4 — REFLECTION
+// AGENT 2 — SPACING (dynamic)
 // ═══════════════════════════════════════════════════════
 (function() {
-  const frameworks = [
-    { label:'Calibration', icon:'◎', theory:'Metacognitive accuracy — Dunning-Kruger / Flavell 1979', prompt:'Before this session, how confident were you in your MI knowledge (1–10)? After answering, which specific questions revealed a gap between your confidence and your actual accuracy?', followup:'Describe one assumption about MI management you held before today that was corrected or refined.' },
-    { label:'Error analysis', icon:'△', theory:'Error-driven learning — Butterfield & Metcalfe 2001', prompt:'Choose the question where you performed worst. What reasoning path led to the wrong answer? Was it a knowledge gap, a recall failure, or a reasoning error (confusing similar concepts)?', followup:'How will you approach this concept differently the next time you encounter it clinically?' },
-    { label:'Connection', icon:'⟡', theory:'Depth-of-processing — Craik & Lockhart 1972', prompt:'Connect one concept from today\'s MI session to a different domain you already know (pharmacology, physiology, pathology, or a prior patient encounter). Be explicit about the structural similarity.', followup:'Does this connection change how you understand either concept?' },
-    { label:'Transfer', icon:'→', theory:'Transfer-appropriate processing — Morris et al. 1977', prompt:'Construct a clinical scenario (real or imagined) where you would need to apply today\'s MI learning. Walk through your clinical reasoning step by step.', followup:'What knowledge gaps would you need to fill before managing this case confidently?' },
-    { label:'Goals', icon:'◈', theory:'Self-regulated learning — Zimmerman 2000', prompt:'Based on today\'s session, identify the two concepts you most need to strengthen. For each, specify the action you will take before your next session.', followup:'How will you know when you have achieved sufficient mastery in these areas?' },
-  ];
+  const body = document.getElementById('sp-body');
 
+  async function startSpacing() {
+    body.innerHTML = loadingCard('Checking your spacing schedule via Claude…');
+    try {
+      const data = await callAgent('spacing', `Check what concepts are due for spaced repetition review for this learner on the topic of ${LEARNER?.topic || 'Myocardial Infarction'}. If concepts are due, present the first one for recall practice. If none are due, tell the learner their schedule and when to return.`);
+      renderSpacingResponse(data.text);
+    } catch(e) {
+      body.innerHTML = `<div class="feedback danger show">Error: ${e.message}</div><button class="btn" onclick="startSpacing()" style="margin-top:10px">Retry</button>`;
+    }
+  }
+
+  function renderSpacingResponse(text) {
+    body.innerHTML = agentResponseCard(text, '#0F6E56') + `
+      <div class="card" style="margin-top:0">
+        <div class="section-label">Your recall</div>
+        <textarea id="sp-ans" placeholder="Write everything you can recall about this concept before rating…" style="min-height:100px"></textarea>
+        <div class="btn-row" style="margin-top:10px">
+          ${['Forgot','Partial','Good','Perfect'].map((l,i) => `<button class="btn" onclick="rateSpacing(${i},'${l}')">${l}</button>`).join('')}
+        </div>
+      </div>`;
+    window.rateSpacing = async (score, label) => {
+      const ans = document.getElementById('sp-ans')?.value || '';
+      body.innerHTML += loadingCard('Saving recall rating and scheduling next review…');
+      try {
+        const data = await callAgent('spacing', `The learner rated their recall as "${label}" (score ${score}/3). Their written recall was: "${ans}". Schedule the next review accordingly using SM-2, give feedback on what they missed, and present the next due concept if any remain.`);
+        logEvent('spacing','review_rated',{score});
+        body.innerHTML = agentResponseCard(data.text, '#0F6E56') + `
+          <div class="btn-row">
+            <button class="btn primary" onclick="continueSpacing()">Continue →</button>
+            <button class="btn" onclick="startSpacing()">Restart session</button>
+          </div>`;
+        window.continueSpacing = () => {
+          body.innerHTML = loadingCard('Loading next due concept…');
+          callAgent('spacing', 'Continue to the next due concept for review, or confirm all are done.').then(d => renderSpacingResponse(d.text)).catch(e => { body.innerHTML = `<div class="feedback danger show">${e.message}</div>`; });
+        };
+      } catch(e) {
+        body.innerHTML = `<div class="feedback danger show">Error: ${e.message}</div>`;
+      }
+    };
+  }
+
+  window._spStart = startSpacing;
+  document.querySelector('[data-panel="spacing"]').addEventListener('click', () => {
+    if (body.innerHTML.trim() === '') startSpacing();
+  });
+  startSpacing();
+})();
+
+// ═══════════════════════════════════════════════════════
+// AGENT 3 — INTERLEAVING (dynamic)
+// ═══════════════════════════════════════════════════════
+(function() {
+  const body = document.getElementById('il-body');
+  let done = 0;
+
+  async function startInterleaving() {
+    done = 0;
+    body.innerHTML = loadingCard('Generating interleaved question across domains…');
+    try {
+      const data = await callAgent('interleaving', `Start an interleaved practice session for the topic "${LEARNER?.topic || 'Myocardial Infarction'}". Randomly select one of these 4 domains: Pathophysiology, Pharmacology, Diagnosis, or Clinical Management. Generate a question WITHOUT revealing the domain. Tell the learner to identify the domain before answering.`);
+      renderILQuestion(data.text);
+    } catch(e) {
+      body.innerHTML = `<div class="feedback danger show">Error: ${e.message}</div><button class="btn" onclick="startInterleaving()" style="margin-top:10px">Retry</button>`;
+    }
+  }
+
+  function renderILQuestion(text) {
+    body.innerHTML = `
+      <div class="card">
+        <div class="section-label">Interleaved session · question ${done+1} · domain hidden · ${LEARNER?.topic}</div>
+        <div class="feedback info show" style="margin-bottom:14px">Identify the domain (Pathophysiology / Pharmacology / Diagnosis / Clinical Management) before answering.</div>
+        <div class="qtext">${text.replace(/\n/g,'<br>')}</div>
+        <textarea id="il-ans" placeholder="State the domain, then write your answer…" style="min-height:100px"></textarea>
+        <div class="btn-row">
+          <button class="btn primary" onclick="submitIL()">Submit &amp; reveal domain</button>
+          <button class="btn" onclick="skipIL()">Skip</button>
+        </div>
+      </div>`;
+    window.submitIL = async () => {
+      const ans = document.getElementById('il-ans')?.value || '';
+      body.innerHTML += loadingCard('Revealing domain and assessing answer…');
+      try {
+        const data = await callAgent('interleaving', `The learner's answer and domain identification: "${ans}". Now reveal the domain, assess whether they identified it correctly, score their clinical answer, explain the key concepts, and flag any discrimination errors.`);
+        done++;
+        logEvent('interleaving','interleave_reveal',{});
+        body.innerHTML = agentResponseCard(data.text, '#854F0B') + `
+          <div class="btn-row">
+            <button class="btn primary" onclick="nextIL()">Next question →</button>
+            <button class="btn" onclick="showILSummary()">End session (${done} done)</button>
+          </div>`;
+        window.nextIL = () => {
+          body.innerHTML = loadingCard('Generating next interleaved question…');
+          callAgent('interleaving', `Generate the next interleaved question for "${LEARNER?.topic}". Pick a different domain from before. Do not reveal the domain.`).then(d => renderILQuestion(d.text)).catch(e => { body.innerHTML = `<div class="feedback danger show">${e.message}</div>`; });
+        };
+      } catch(e) {
+        body.innerHTML = `<div class="feedback danger show">Error: ${e.message}</div>`;
+      }
+    };
+    window.skipIL = () => {
+      body.innerHTML = loadingCard('Loading next question…');
+      callAgent('interleaving', `Skip this question and generate a new interleaved question for "${LEARNER?.topic}" from a different domain. Do not reveal the domain.`).then(d => renderILQuestion(d.text)).catch(e => { body.innerHTML = `<div class="feedback danger show">${e.message}</div>`; });
+    };
+  }
+
+  function showILSummary() {
+    body.innerHTML = `<div class="card">
+      <div class="section-label">Interleaving session complete · ${LEARNER?.topic}</div>
+      <div style="display:flex;align-items:center;gap:20px;padding:14px;background:var(--bg2);border-radius:var(--radius);margin-bottom:14px">
+        <div style="font-size:36px;font-weight:600">${done}</div>
+        <div class="stext">questions across mixed domains<br>Discrimination and transfer practice complete</div>
+      </div>
+      <div class="btn-row">
+        <button class="btn primary" onclick="startInterleaving()">New session</button>
+        <button class="btn" onclick="goTo('recommend')">Recommendations →</button>
+      </div>
+    </div>`;
+  }
+
+  window._ilStart = startInterleaving;
+  document.querySelector('[data-panel="interleaving"]').addEventListener('click', () => {
+    if (body.innerHTML.trim() === '') startInterleaving();
+  });
+  startInterleaving();
+})();
+
+// ═══════════════════════════════════════════════════════
+// AGENT 4 — REFLECTION (dynamic)
+// ═══════════════════════════════════════════════════════
+(function() {
   const body = document.getElementById('ref-body');
   const journal = [];
+  const frameworks = [
+    { label:'Calibration', icon:'◎', theory:'Dunning-Kruger / Flavell 1979' },
+    { label:'Error analysis', icon:'△', theory:'Butterfield & Metcalfe 2001' },
+    { label:'Connection', icon:'⟡', theory:'Craik & Lockhart 1972' },
+    { label:'Transfer', icon:'→', theory:'Morris et al. 1977' },
+    { label:'Goals', icon:'◈', theory:'Zimmerman 2000' },
+  ];
   let activeF = 0;
+  let currentPrompt = '';
 
-  function renderReflect() {
-    const f = frameworks[activeF];
-    body.innerHTML = `
-      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">
-        ${frameworks.map((fr,i)=>`<button class="btn sm${i===activeF?' primary':''}" onclick="switchF(${i})">${fr.icon} ${fr.label}</button>`).join('')}
-      </div>
+  async function loadFramework(idx) {
+    activeF = idx;
+    const f = frameworks[idx];
+    body.innerHTML = frameworkTabs() + loadingCard(`Loading ${f.label} reflection prompt…`);
+    try {
+      const data = await callAgent('reflection', `Use the ${f.label} reflection framework (${f.theory}) to generate a targeted reflection prompt for this learner about their recent practice on "${LEARNER?.topic || 'Myocardial Infarction'}". Base the prompt on their actual performance history and gaps. Include a primary question and a Socratic follow-up.`);
+      currentPrompt = data.text;
+      renderReflectForm(data.text, f);
+    } catch(e) {
+      body.innerHTML = frameworkTabs() + `<div class="feedback danger show">Error: ${e.message}</div>`;
+    }
+  }
+
+  function frameworkTabs() {
+    return `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:14px">
+      ${frameworks.map((fr,i)=>`<button class="btn sm${i===activeF?' primary':''}" onclick="switchReflectF(${i})">${fr.icon} ${fr.label}</button>`).join('')}
+    </div>`;
+  }
+
+  function renderReflectForm(promptText, f) {
+    body.innerHTML = frameworkTabs() + `
       <div class="card">
         <div class="section-label">${f.label} · <span style="font-style:italic">${f.theory}</span></div>
-        <div style="font-style:italic;font-size:14px;color:var(--text);line-height:1.7;margin-bottom:12px">"${f.prompt}"</div>
-        <textarea id="r1" placeholder="Primary reflection..." style="min-height:100px"></textarea>
-        <div style="font-style:italic;font-size:13px;color:var(--text2);margin:12px 0 8px">"${f.followup}"</div>
-        <textarea id="r2" placeholder="Follow-up..." style="min-height:68px"></textarea>
-        <button class="btn primary" style="margin-top:12px" onclick="saveRefl()">Save to journal</button>
+        <div style="font-size:13px;color:var(--text);line-height:1.75;margin-bottom:14px">${promptText.replace(/\n/g,'<br>')}</div>
+        <textarea id="r1" placeholder="Your reflection…" style="min-height:110px"></textarea>
+        <button class="btn primary" style="margin-top:10px" onclick="submitReflection()">Submit reflection</button>
       </div>
       ${journal.length ? `<div class="card">
         <div class="section-label">Reflection journal (${journal.length} entries)</div>
@@ -827,27 +884,48 @@ async function applyCustomTopic() {
           <div style="font-size:10px;color:var(--text3);margin-bottom:3px">${e.framework} · ${e.time}</div>
           <div style="font-size:13px;color:var(--text)">${e.text.substring(0,120)}${e.text.length>120?'…':''}</div>
         </div>`).join('')}
-      </div>` : ''}
-      <div class="card">
-        <div class="section-label">Reflection principle</div>
-        <div class="stext">${['Accurate self-assessment enables calibrated study — learners who overestimate performance under-invest in weak areas (Dunning-Kruger effect).','Incorrect responses activate stronger error-correction encoding when followed by corrective feedback than correct responses do.','Facts connected to rich semantic networks are retrieved more easily and transferred to new contexts (depth-of-processing theory).','Encoding in a context similar to retrieval context (clinical scenario) improves real-world transfer of knowledge.','Goal-setting and self-monitoring are the two highest-leverage metacognitive strategies for long-term academic performance.'][activeF]}</div>
-      </div>`;
-    window.switchF = i => { activeF=i; renderReflect(); };
-    window.saveRefl = () => {
-      const r1 = document.getElementById('r1')?.value||'';
-      const r2 = document.getElementById('r2')?.value||'';
-      if (!r1.trim()) return;
-      journal.push({framework:f.label,text:r1+(r2?' | '+r2:''),time:new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})});
-      STATE.learnerProfile.reflectionEngagement = Math.min(1, STATE.learnerProfile.reflectionEngagement + 0.12);
-      logEvent('reflection','reflection_saved',{framework:f.label});
-      renderReflect();
+      </div>` : ''}`;
+
+    window.switchReflectF = i => loadFramework(i);
+    window.submitReflection = async () => {
+      const r1 = document.getElementById('r1')?.value.trim();
+      if (!r1) return;
+      body.innerHTML = frameworkTabs() + loadingCard('Analysing your reflection and generating Socratic follow-up…');
+      try {
+        const data = await callAgent('reflection', `The learner's reflection using the ${f.label} framework: "${r1}". Identify genuine insights vs blind spots. Flag any critical knowledge gap revealed. Then ask one targeted Socratic follow-up question that challenges the most significant blind spot.`);
+        journal.push({ framework: f.label, text: r1, time: new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) });
+        STATE.learnerProfile.reflectionEngagement = Math.min(1, STATE.learnerProfile.reflectionEngagement + 0.12);
+        logEvent('reflection','reflection_saved',{framework:f.label});
+        body.innerHTML = frameworkTabs() + agentResponseCard(data.text, '#534AB7') + `
+          <div class="card" style="margin-top:0">
+            <div class="section-label">Follow-up response</div>
+            <textarea id="r2" placeholder="Your follow-up answer…" style="min-height:80px"></textarea>
+            <div class="btn-row">
+              <button class="btn primary" onclick="saveFollowup()">Save to journal</button>
+              <button class="btn" onclick="loadFramework(${activeF})">New prompt</button>
+            </div>
+          </div>
+          ${journal.length ? `<div class="card"><div class="section-label">Journal (${journal.length} entries)</div>${journal.slice(-3).reverse().map(e=>`<div style="padding:6px 0;border-bottom:0.5px solid var(--border);font-size:12px;color:var(--text2)">${e.framework} · ${e.time} — ${e.text.substring(0,80)}…</div>`).join('')}</div>` : ''}`;
+        window.saveFollowup = () => {
+          const r2 = document.getElementById('r2')?.value.trim();
+          if (r2) journal.push({ framework: f.label + ' follow-up', text: r2, time: new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'}) });
+          loadFramework(activeF);
+        };
+      } catch(e) {
+        body.innerHTML = frameworkTabs() + `<div class="feedback danger show">Error: ${e.message}</div>`;
+      }
     };
   }
 
-  renderReflect();
+  window._refStart = () => loadFramework(0);
+  document.querySelector('[data-panel="reflection"]').addEventListener('click', () => {
+    if (body.innerHTML.trim() === '') loadFramework(0);
+  });
+  loadFramework(0);
 })();
 
 // ═══════════════════════════════════════════════════════
+// PLACEHOLDER — kept for backward compat (static Qs removed)
 // GUIDE
 // ═══════════════════════════════════════════════════════
 (function() {
