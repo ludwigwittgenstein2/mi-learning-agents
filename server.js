@@ -34,7 +34,7 @@ app.post('/api/learner', async (req, res) => {
       const Anthropic = require('@anthropic-ai/sdk');
       const client = new Anthropic({ apiKey });
       await client.messages.create({
-        model: 'claude-haiku-4-5-20251001',
+        model: 'claude-sonnet-4-6',
         max_tokens: 10,
         messages: [{ role: 'user', content: 'hi' }],
       });
@@ -108,7 +108,7 @@ app.post('/api/learner/login', async (req, res) => {
       const Anthropic = require('@anthropic-ai/sdk');
       const client = new Anthropic({ apiKey });
       await client.messages.create({
-        model: 'claude-haiku-4-5-20251001',
+        model: 'claude-sonnet-4-6',
         max_tokens: 10,
         messages: [{ role: 'user', content: 'hi' }],
       });
