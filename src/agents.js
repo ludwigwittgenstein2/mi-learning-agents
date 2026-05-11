@@ -160,8 +160,8 @@ async function runAgent(apiKey, systemPrompt, userMessage, context, availableToo
 
     // Only pass tools param if we have tools — empty array causes API error
     const createParams = {
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 1500,
+      model: process.env.CLAUDE_MODEL || 'claude-sonnet-4-6',
+      max_tokens: Number(process.env.CLAUDE_MAX_TOKENS || 2500),
       system: systemPrompt,
       messages,
     };
