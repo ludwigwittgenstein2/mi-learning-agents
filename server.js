@@ -9,6 +9,7 @@ const { runAgent, getSystemPrompt } = require('./src/agents');
 
 const app  = express();
 const PORT = process.env.PORT || 3000;
+const CLAUDE_MODEL = process.env.CLAUDE_MODEL || 'claude-sonnet-4-6';
 
 app.use(cors());
 app.use(express.json({ limit: '4mb' }));
@@ -34,7 +35,7 @@ app.post('/api/learner', async (req, res) => {
       const Anthropic = require('@anthropic-ai/sdk');
       const client = new Anthropic({ apiKey });
       await client.messages.create({
-        model: 'claude-sonnet-4-6',
+        model: CLAUDE_MODEL,
         max_tokens: 10,
         messages: [{ role: 'user', content: 'hi' }],
       });
@@ -108,7 +109,7 @@ app.post('/api/learner/login', async (req, res) => {
       const Anthropic = require('@anthropic-ai/sdk');
       const client = new Anthropic({ apiKey });
       await client.messages.create({
-        model: 'claude-sonnet-4-6',
+        model: CLAUDE_MODEL,
         max_tokens: 10,
         messages: [{ role: 'user', content: 'hi' }],
       });
